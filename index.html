@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RoseYu · 自我介紹</title>
+  <style>
+    :root {
+      --bg: #fff7f0;
+      --cream: #fffaf5;
+      --peach: #ffd9b7;
+      --coral: #ff8a5c;
+      --coral-deep: #f26b3a;
+      --rose: #e14d63;
+      --amber: #f6a623;
+      --ink: #3a2a22;
+      --ink-soft: #7a6157;
+      --shadow: 0 20px 50px -20px rgba(226, 107, 58, 0.45);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, "PingFang TC", "Noto Sans TC", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* Decorative warm blobs */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(70px);
+      opacity: 0.55;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .blob-1 { width: 420px; height: 420px; background: var(--peach); top: -120px; right: -100px; }
+    .blob-2 { width: 360px; height: 360px; background: #ffb98a; bottom: -140px; left: -120px; }
+    .blob-3 { width: 300px; height: 300px; background: #ffcf9e; top: 45%; right: -140px; }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px 0;
+    }
+
+    .avatar {
+      width: 148px;
+      height: 148px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 60px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, var(--amber), var(--coral), var(--rose));
+      box-shadow: var(--shadow);
+      margin-bottom: 28px;
+      animation: float 5s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-14px); }
+    }
+
+    .hero h1 {
+      font-size: clamp(2.6rem, 7vw, 4.2rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(120deg, var(--coral-deep), var(--rose), var(--amber));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 14px;
+    }
+
+    .role {
+      display: inline-block;
+      padding: 8px 22px;
+      border-radius: 999px;
+      background: rgba(255, 138, 92, 0.15);
+      color: var(--coral-deep);
+      font-weight: 600;
+      font-size: 1.05rem;
+      margin-bottom: 24px;
+    }
+
+    .tagline {
+      max-width: 520px;
+      color: var(--ink-soft);
+      font-size: 1.12rem;
+    }
+
+    .scroll-hint {
+      margin-top: 54px;
+      color: var(--coral);
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      animation: bounce 2s infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); opacity: 0.6; }
+      50% { transform: translateY(8px); opacity: 1; }
+    }
+
+    /* Sections */
+    section.block { padding: 70px 0; }
+
+    .section-title {
+      font-size: 1.9rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section-title::before {
+      content: "";
+      width: 36px;
+      height: 5px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--coral), var(--amber));
+    }
+    .section-sub { color: var(--ink-soft); margin-bottom: 36px; }
+
+    .card {
+      background: var(--cream);
+      border-radius: 24px;
+      padding: 34px;
+      box-shadow: 0 10px 40px -24px rgba(226, 107, 58, 0.5);
+      border: 1px solid rgba(255, 176, 122, 0.35);
+    }
+
+    /* Interests grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 22px;
+    }
+    .interest {
+      background: var(--cream);
+      border-radius: 22px;
+      padding: 30px;
+      border: 1px solid rgba(255, 176, 122, 0.35);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .interest:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow);
+    }
+    .interest .emoji {
+      font-size: 40px;
+      display: inline-grid;
+      place-items: center;
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--peach), #ffbe95);
+      margin-bottom: 18px;
+    }
+    .interest h3 { font-size: 1.3rem; margin-bottom: 8px; }
+    .interest p { color: var(--ink-soft); font-size: 0.98rem; }
+
+    /* Stats / traits */
+    .traits {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .tag {
+      padding: 8px 18px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1.5px solid var(--peach);
+      color: var(--coral-deep);
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 50px 0 60px;
+      color: var(--ink-soft);
+      font-size: 0.9rem;
+    }
+    footer .heart { color: var(--rose); }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <!-- Hero -->
+  <header class="hero wrap">
+    <div class="avatar">R</div>
+    <h1>RoseYu</h1>
+    <span class="role">專案經理 · Project Manager</span>
+    <p class="tagline">用條理與熱情推動每一個專案，工作之外，我在球場與健身房裡尋找同樣的節奏與能量。</p>
+    <div class="scroll-hint">向下滑動 ↓</div>
+  </header>
+
+  <!-- About -->
+  <section class="block wrap reveal">
+    <h2 class="section-title">關於我</h2>
+    <p class="section-sub">Hello, 我是 RoseYu 👋</p>
+    <div class="card">
+      <p>身為一名專案經理，我擅長在複雜的需求中理出清晰的路徑，協調團隊、掌控時程，並確保每一個里程碑都能穩穩達成。我相信好的溝通與紀律是專案成功的關鍵。</p>
+      <div class="traits">
+        <span class="tag">溝通協調</span>
+        <span class="tag">時程管理</span>
+        <span class="tag">跨團隊合作</span>
+        <span class="tag">問題解決</span>
+        <span class="tag">目標導向</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interests -->
+  <section class="block wrap reveal">
+    <h2 class="section-title">我的興趣</h2>
+    <p class="section-sub">讓我保持活力的兩件事</p>
+    <div class="grid">
+      <div class="interest">
+        <span class="emoji">🏀</span>
+        <h3>籃球</h3>
+        <p>熱愛球場上的團隊默契與臨場判斷，那種為共同目標全力以赴的感覺，和帶領專案不謀而合。</p>
+      </div>
+      <div class="interest">
+        <span class="emoji">💪</span>
+        <h3>健身</h3>
+        <p>透過規律的訓練保持身心平衡，也讓我學會設定目標、持續累積，一步步突破自己的極限。</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Made with <span class="heart">♥</span> by RoseYu · 2026</p>
+  </footer>
+
+  <script>
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('show'); });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  </script>
+</body>
+</html>
