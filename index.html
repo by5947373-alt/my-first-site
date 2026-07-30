@@ -306,6 +306,28 @@
       padding: 4px 10px; border-radius: 999px; white-space: nowrap;
     }
     .gb-del:hover { background: var(--rose); color: #fff; }
+
+    /* Guestbook — AI summary */
+    .gb-ai { margin: 4px 0 18px; }
+    .gb-ai-btn {
+      border: none; cursor: pointer; font: inherit; font-weight: 700;
+      color: var(--coral-deep); background: rgba(255, 138, 92, 0.14);
+      border: 1.5px solid var(--peach); border-radius: 999px; padding: 10px 20px;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .gb-ai-btn:hover { transform: translateY(-2px); background: rgba(255, 138, 92, 0.22); }
+    .gb-ai-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .gb-ai-out {
+      margin-top: 14px; padding: 16px 20px; border-radius: 16px;
+      background: linear-gradient(120deg, rgba(246,166,35,.12), rgba(225,77,99,.10));
+      border: 1px solid rgba(255, 176, 122, 0.5);
+      color: var(--ink); line-height: 1.6;
+    }
+    .gb-ai-out .gb-ai-label {
+      display: block; font-size: 0.78rem; font-weight: 700; color: var(--coral-deep);
+      margin-bottom: 6px; letter-spacing: 1px;
+    }
+    .gb-ai-out .gb-ai-text { font-size: 1.05rem; }
   </style>
 </head>
 <body>
@@ -372,6 +394,14 @@
         </div>
         <div class="gb-status" id="gb-status"></div>
       </form>
+      <div class="gb-ai">
+        <button class="gb-ai-btn" id="gb-ai-btn" type="button">✨ AI 一句話總結</button>
+        <div class="gb-ai-out" id="gb-ai-out" hidden>
+          <span class="gb-ai-label">AI 總結</span>
+          <span class="gb-ai-text" id="gb-ai-text"></span>
+        </div>
+      </div>
+
       <ul class="gb-list" id="gb-list"></ul>
 
       <div class="gb-admin" id="gb-admin">
@@ -584,6 +614,26 @@
         statusEl.textContent = err.message || '送出失敗，請稍後再試。';
       } finally {
         submitEl.disabled = false;
+      }
+    });
+
+    // ---- AI one-sentence summary ----
+    const aiBtn = document.getElementById('gb-ai-btn');
+    const aiOut = document.getElementById('gb-ai-out');
+    const aiText = document.getElementById('gb-ai-text');
+    aiBtn.addEventListener('click', async () => {
+      aiBtn.disabled = true;
+      aiOut.hidden = false;
+      aiText.textContent = 'AI 思考中…';
+      try {
+        const res = await fetch('/api/summary', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '總結失敗');
+        aiText.textContent = data.summary || '（沒有內容）';
+      } catch (err) {
+        aiText.textContent = err.message || '總結失敗，請稍後再試';
+      } finally {
+        aiBtn.disabled = false;
       }
     });
 
