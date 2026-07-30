@@ -1,0 +1,13 @@
+{
+  "name": "my-first-site",
+  "version": "1.0.0",
+  "description": "RoseYu self-introduction page with a SQLite-backed guestbook",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

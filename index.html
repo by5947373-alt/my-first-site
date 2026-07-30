@@ -211,6 +211,68 @@
       transition: opacity 0.7s ease, transform 0.7s ease;
     }
     .reveal.show { opacity: 1; transform: translateY(0); }
+
+    /* Guestbook */
+    .guestbook .card { padding: 30px; }
+    .gb-form {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+    .gb-row { display: flex; gap: 14px; flex-wrap: wrap; }
+    .gb-form input, .gb-form textarea {
+      width: 100%;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+      border: 1.5px solid var(--peach);
+      border-radius: 14px;
+      padding: 13px 16px;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .gb-form input { flex: 1; min-width: 160px; }
+    .gb-form textarea { resize: vertical; min-height: 74px; }
+    .gb-form input:focus, .gb-form textarea:focus {
+      border-color: var(--coral);
+      box-shadow: 0 0 0 4px rgba(255, 138, 92, 0.15);
+    }
+    .gb-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .gb-count { color: var(--ink-soft); font-size: 0.85rem; }
+    .gb-btn {
+      border: none;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 999px;
+      background: linear-gradient(120deg, var(--coral), var(--rose));
+      box-shadow: 0 8px 20px -8px rgba(226, 107, 58, 0.7);
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .gb-btn:hover { transform: translateY(-2px); }
+    .gb-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .gb-status { min-height: 20px; font-size: 0.88rem; color: var(--coral-deep); }
+    .gb-list { list-style: none; display: grid; gap: 14px; margin-top: 26px; }
+    .gb-item {
+      background: #fff;
+      border: 1px solid rgba(255, 176, 122, 0.4);
+      border-left: 4px solid var(--coral);
+      border-radius: 16px;
+      padding: 16px 20px;
+    }
+    .gb-item .gb-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .gb-item .gb-name { font-weight: 700; color: var(--coral-deep); }
+    .gb-item .gb-time { font-size: 0.78rem; color: var(--ink-soft); white-space: nowrap; }
+    .gb-item .gb-msg { color: var(--ink); word-break: break-word; }
+    .gb-empty { color: var(--ink-soft); text-align: center; padding: 18px 0; }
   </style>
 </head>
 <body>
@@ -261,15 +323,125 @@
     </div>
   </section>
 
+  <!-- Guestbook -->
+  <section class="block wrap reveal guestbook">
+    <h2 class="section-title">訪客留言板</h2>
+    <p class="section-sub">留下你的名字和一句話吧 ✍️</p>
+    <div class="card">
+      <form class="gb-form" id="gb-form" autocomplete="off">
+        <div class="gb-row">
+          <input id="gb-name" name="name" type="text" placeholder="你的名字" maxlength="40" required>
+        </div>
+        <textarea id="gb-message" name="message" placeholder="想對 RoseYu 說的一句話…" maxlength="280" required></textarea>
+        <div class="gb-bar">
+          <span class="gb-count"><span id="gb-count">0</span>/280</span>
+          <button class="gb-btn" id="gb-submit" type="submit">送出留言</button>
+        </div>
+        <div class="gb-status" id="gb-status"></div>
+      </form>
+      <ul class="gb-list" id="gb-list"></ul>
+    </div>
+  </section>
+
   <footer>
     <p>Made with <span class="heart">♥</span> by RoseYu · 2026</p>
   </footer>
 
   <script>
+    // Scroll reveal
     const io = new IntersectionObserver((entries) => {
       entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('show'); });
     }, { threshold: 0.15 });
     document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+    // ---- Guestbook ----
+    const form = document.getElementById('gb-form');
+    const nameEl = document.getElementById('gb-name');
+    const msgEl = document.getElementById('gb-message');
+    const listEl = document.getElementById('gb-list');
+    const statusEl = document.getElementById('gb-status');
+    const submitEl = document.getElementById('gb-submit');
+    const countEl = document.getElementById('gb-count');
+
+    msgEl.addEventListener('input', () => { countEl.textContent = msgEl.value.length; });
+
+    function fmtTime(s) {
+      // server stores UTC "YYYY-MM-DD HH:MM:SS"; show local time
+      const d = new Date((s || '').replace(' ', 'T') + 'Z');
+      if (isNaN(d)) return '';
+      return d.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Uses textContent everywhere → user input can never inject HTML (no XSS).
+    function render(messages) {
+      listEl.replaceChildren();
+      if (!messages.length) {
+        const li = document.createElement('li');
+        li.className = 'gb-empty';
+        li.textContent = '還沒有留言，成為第一個吧！';
+        listEl.append(li);
+        return;
+      }
+      for (const m of messages) {
+        const li = document.createElement('li');
+        li.className = 'gb-item';
+
+        const head = document.createElement('div');
+        head.className = 'gb-head';
+        const name = document.createElement('span');
+        name.className = 'gb-name';
+        name.textContent = m.name;
+        const time = document.createElement('span');
+        time.className = 'gb-time';
+        time.textContent = fmtTime(m.created_at);
+        head.append(name, time);
+
+        const msg = document.createElement('div');
+        msg.className = 'gb-msg';
+        msg.textContent = m.message;
+
+        li.append(head, msg);
+        listEl.append(li);
+      }
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/api/messages');
+        const data = await res.json();
+        render(data.messages || []);
+      } catch {
+        statusEl.textContent = '留言載入失敗，請稍後再試。';
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = nameEl.value.trim();
+      const message = msgEl.value.trim();
+      if (!name || !message) { statusEl.textContent = '名字和留言都要填喔。'; return; }
+      submitEl.disabled = true;
+      statusEl.textContent = '送出中…';
+      try {
+        const res = await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, message }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '送出失敗');
+        msgEl.value = '';
+        countEl.textContent = '0';
+        statusEl.textContent = '留言成功，謝謝你 🙌';
+        await load();
+      } catch (err) {
+        statusEl.textContent = err.message || '送出失敗，請稍後再試。';
+      } finally {
+        submitEl.disabled = false;
+      }
+    });
+
+    load();
   </script>
 </body>
 </html>
