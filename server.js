@@ -5,6 +5,7 @@ import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { timingSafeEqual } from 'node:crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 8080;
@@ -28,9 +29,28 @@ const listStmt = db.prepare(
 const insertStmt = db.prepare(
   'INSERT INTO messages (name, message) VALUES (?, ?)'
 );
+const getByIdStmt = db.prepare(
+  'SELECT id, name, message, created_at FROM messages WHERE id = ?'
+);
+const deleteStmt = db.prepare('DELETE FROM messages WHERE id = ?');
+const clearStmt = db.prepare('DELETE FROM messages');
 
 const NAME_MAX = 40;
 const MSG_MAX = 280;
+
+// Admin token comes from the environment only — never hard-coded / committed.
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+
+// Constant-time bearer-token check; returns false if admin is unconfigured.
+function isAdmin(req) {
+  if (!ADMIN_TOKEN) return false;
+  const auth = req.headers['authorization'] || '';
+  const provided = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(ADMIN_TOKEN);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 function sendJSON(res, status, data) {
   const body = JSON.stringify(data);
@@ -75,8 +95,29 @@ const server = createServer(async (req, res) => {
   const path = url.pathname;
 
   // --- API ---
+  // Lets the admin UI confirm the token before showing controls.
+  if (path === '/api/admin/check' && req.method === 'GET') {
+    return sendJSON(res, isAdmin(req) ? 200 : 401, { ok: isAdmin(req) });
+  }
+
   if (path === '/api/messages' && req.method === 'GET') {
     return sendJSON(res, 200, { messages: listStmt.all() });
+  }
+
+  // Delete one message by id (admin only).
+  const delMatch = path.match(/^\/api\/messages\/(\d+)$/);
+  if (delMatch && req.method === 'DELETE') {
+    if (!isAdmin(req)) return sendJSON(res, 401, { error: '需要管理權限' });
+    const info = deleteStmt.run(Number(delMatch[1]));
+    if (info.changes === 0) return sendJSON(res, 404, { error: '找不到這則留言' });
+    return sendJSON(res, 200, { ok: true });
+  }
+
+  // Delete all messages (admin only).
+  if (path === '/api/messages' && req.method === 'DELETE') {
+    if (!isAdmin(req)) return sendJSON(res, 401, { error: '需要管理權限' });
+    const info = clearStmt.run();
+    return sendJSON(res, 200, { ok: true, deleted: info.changes });
   }
 
   if (path === '/api/messages' && req.method === 'POST') {
@@ -95,9 +136,7 @@ const server = createServer(async (req, res) => {
       return sendJSON(res, 400, { error: '字數超過上限了' });
     }
     const info = insertStmt.run(name, message);
-    const row = db
-      .prepare('SELECT id, name, message, created_at FROM messages WHERE id = ?')
-      .get(info.lastInsertRowid);
+    const row = getByIdStmt.get(info.lastInsertRowid);
     return sendJSON(res, 201, { message: row });
   }
 

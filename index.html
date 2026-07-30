@@ -273,6 +273,39 @@
     .gb-item .gb-time { font-size: 0.78rem; color: var(--ink-soft); white-space: nowrap; }
     .gb-item .gb-msg { color: var(--ink); word-break: break-word; }
     .gb-empty { color: var(--ink-soft); text-align: center; padding: 18px 0; }
+
+    /* Guestbook — admin/manage controls */
+    .gb-admin { margin-top: 18px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .gb-link {
+      background: none; border: none; cursor: pointer;
+      color: var(--ink-soft); font: inherit; font-size: 0.82rem;
+      padding: 4px 2px; text-decoration: underline; text-underline-offset: 3px;
+    }
+    .gb-link:hover { color: var(--coral-deep); }
+    .gb-admin-box { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; width: 100%; }
+    .gb-admin-box input {
+      flex: 1; min-width: 160px; font: inherit;
+      border: 1.5px solid var(--peach); border-radius: 12px; padding: 9px 14px; outline: none;
+    }
+    .gb-admin-box input:focus { border-color: var(--coral); box-shadow: 0 0 0 4px rgba(255,138,92,.15); }
+    .gb-mini {
+      border: none; cursor: pointer; font: inherit; font-weight: 600; font-size: 0.85rem;
+      padding: 9px 16px; border-radius: 999px; color: #fff;
+      background: linear-gradient(120deg, var(--coral), var(--rose));
+    }
+    .gb-mini.ghost { background: #fff; color: var(--coral-deep); border: 1.5px solid var(--peach); }
+    .gb-mini.danger { background: linear-gradient(120deg, #e14d63, #c0392b); }
+    .gb-badge {
+      font-size: 0.78rem; font-weight: 700; color: var(--coral-deep);
+      background: rgba(255,138,92,.15); padding: 4px 12px; border-radius: 999px;
+    }
+    .gb-item .gb-head { align-items: center; }
+    .gb-del {
+      border: none; cursor: pointer; background: rgba(225,77,99,.1); color: var(--rose);
+      font: inherit; font-size: 0.78rem; font-weight: 600;
+      padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+    }
+    .gb-del:hover { background: var(--rose); color: #fff; }
   </style>
 </head>
 <body>
@@ -340,6 +373,22 @@
         <div class="gb-status" id="gb-status"></div>
       </form>
       <ul class="gb-list" id="gb-list"></ul>
+
+      <div class="gb-admin" id="gb-admin">
+        <button class="gb-link" id="gb-admin-open" type="button">🔒 管理</button>
+
+        <div class="gb-admin-box" id="gb-admin-login" hidden>
+          <input id="gb-admin-token" type="password" placeholder="輸入管理密碼" autocomplete="off">
+          <button class="gb-mini" id="gb-admin-enter" type="button">進入管理</button>
+          <button class="gb-mini ghost" id="gb-admin-cancel" type="button">取消</button>
+        </div>
+
+        <div class="gb-admin-box" id="gb-admin-panel" hidden>
+          <span class="gb-badge">管理模式</span>
+          <button class="gb-mini danger" id="gb-admin-clear" type="button">清空全部</button>
+          <button class="gb-mini ghost" id="gb-admin-exit" type="button">結束管理</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -362,6 +411,23 @@
     const statusEl = document.getElementById('gb-status');
     const submitEl = document.getElementById('gb-submit');
     const countEl = document.getElementById('gb-count');
+
+    // Admin/manage state
+    const openBtn = document.getElementById('gb-admin-open');
+    const loginBox = document.getElementById('gb-admin-login');
+    const panelBox = document.getElementById('gb-admin-panel');
+    const tokenInput = document.getElementById('gb-admin-token');
+    let adminToken = localStorage.getItem('gb_admin') || '';
+    let isAdmin = false;
+    let lastMessages = [];
+
+    const authHeaders = () => ({ 'Authorization': 'Bearer ' + adminToken });
+
+    function showAdminUI() {
+      openBtn.hidden = isAdmin;
+      loginBox.hidden = true;
+      panelBox.hidden = !isAdmin;
+    }
 
     msgEl.addEventListener('input', () => { countEl.textContent = msgEl.value.length; });
 
@@ -396,6 +462,15 @@
         time.textContent = fmtTime(m.created_at);
         head.append(name, time);
 
+        if (isAdmin) {
+          const del = document.createElement('button');
+          del.className = 'gb-del';
+          del.type = 'button';
+          del.textContent = '刪除';
+          del.addEventListener('click', () => deleteOne(m.id));
+          head.append(del);
+        }
+
         const msg = document.createElement('div');
         msg.className = 'gb-msg';
         msg.textContent = m.message;
@@ -409,11 +484,82 @@
       try {
         const res = await fetch('/api/messages');
         const data = await res.json();
-        render(data.messages || []);
+        lastMessages = data.messages || [];
+        render(lastMessages);
       } catch {
         statusEl.textContent = '留言載入失敗，請稍後再試。';
       }
     }
+
+    // ---- Admin actions ----
+    openBtn.addEventListener('click', () => {
+      openBtn.hidden = true;
+      loginBox.hidden = false;
+      tokenInput.value = '';
+      tokenInput.focus();
+    });
+    document.getElementById('gb-admin-cancel').addEventListener('click', () => {
+      loginBox.hidden = true;
+      openBtn.hidden = false;
+    });
+    document.getElementById('gb-admin-enter').addEventListener('click', enterAdmin);
+    tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') enterAdmin(); });
+
+    async function enterAdmin() {
+      const token = tokenInput.value.trim();
+      if (!token) return;
+      adminToken = token;
+      const ok = await verifyAdmin();
+      if (ok) {
+        localStorage.setItem('gb_admin', adminToken);
+        statusEl.textContent = '已進入管理模式 🔑';
+        render(lastMessages);
+      } else {
+        adminToken = '';
+        statusEl.textContent = '管理密碼錯誤';
+      }
+    }
+
+    async function verifyAdmin() {
+      if (!adminToken) { isAdmin = false; showAdminUI(); return false; }
+      try {
+        const res = await fetch('/api/admin/check', { headers: authHeaders() });
+        isAdmin = res.ok;
+      } catch { isAdmin = false; }
+      showAdminUI();
+      return isAdmin;
+    }
+
+    document.getElementById('gb-admin-exit').addEventListener('click', () => {
+      adminToken = '';
+      isAdmin = false;
+      localStorage.removeItem('gb_admin');
+      showAdminUI();
+      render(lastMessages);
+      statusEl.textContent = '已結束管理模式';
+    });
+
+    async function deleteOne(id) {
+      if (!confirm('確定要刪除這則留言？')) return;
+      try {
+        const res = await fetch('/api/messages/' + id, { method: 'DELETE', headers: authHeaders() });
+        if (res.status === 401) { statusEl.textContent = '權限已失效，請重新進入管理'; isAdmin = false; showAdminUI(); return; }
+        if (!res.ok) throw new Error();
+        statusEl.textContent = '已刪除留言';
+        await load();
+      } catch { statusEl.textContent = '刪除失敗，請稍後再試'; }
+    }
+
+    document.getElementById('gb-admin-clear').addEventListener('click', async () => {
+      if (!confirm('確定要清空所有留言？此動作無法復原。')) return;
+      try {
+        const res = await fetch('/api/messages', { method: 'DELETE', headers: authHeaders() });
+        if (res.status === 401) { statusEl.textContent = '權限已失效，請重新進入管理'; isAdmin = false; showAdminUI(); return; }
+        if (!res.ok) throw new Error();
+        statusEl.textContent = '已清空所有留言';
+        await load();
+      } catch { statusEl.textContent = '清空失敗，請稍後再試'; }
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -441,7 +587,12 @@
       }
     });
 
-    load();
+    // Init: restore admin session (if any) before first render, then load messages.
+    (async () => {
+      showAdminUI();
+      if (adminToken) await verifyAdmin();
+      await load();
+    })();
   </script>
 </body>
 </html>
