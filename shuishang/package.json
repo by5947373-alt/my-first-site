@@ -1,0 +1,16 @@
+{
+  "name": "shuishang-235",
+  "version": "1.0.0",
+  "description": "23.5° 剛剛好的城市 —— 嘉義水上鄉觀光網站",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "start": "node server.js",
+    "sync": "node sync.js",
+    "gh:check": "node -e \"const g=await import('./lib/github.mjs'); console.log(await g.check())\""
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

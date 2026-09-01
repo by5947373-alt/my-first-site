@@ -1,0 +1,3 @@
+# 執行時的內容（掛在 Zeabur 的持久磁碟上，不進版控）
+data/
+node_modules/

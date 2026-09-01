@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>內容編輯器｜23.5° 剛剛好的城市</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&family=Nunito:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body{padding-bottom:4rem}
+  .ad-head{background:var(--sand); border-bottom:2px solid var(--ink); padding:1.2rem 0}
+  .ad-head-in{width:var(--col); margin-inline:auto; display:flex; gap:1rem; align-items:center; flex-wrap:wrap}
+  .ad-title{font-size:1.3rem; font-weight:900; margin-right:auto}
+  .ad-title span{font-family:var(--disp); color:var(--sun)}
+  .ad-state{font-family:var(--num); font-size:var(--fs-xs); font-weight:700; color:var(--ink-3)}
+  .ad-state.dirty{color:var(--taste)}
+  .warn{background:var(--taste-soft); border:2px solid var(--taste); border-radius:var(--round);
+        padding:1rem 1.2rem; margin:1.5rem 0; font-size:var(--fs-sm); color:var(--ink)}
+  .warn b{display:block; margin-bottom:.3rem}
+  .tabs2{display:flex; gap:.4rem; flex-wrap:wrap; margin:1.5rem 0 1rem}
+  .tab2{font-family:var(--num); font-weight:800; font-size:var(--fs-sm); cursor:pointer;
+        padding:.4rem .95rem; border:2px solid var(--ink); border-radius:999px;
+        background:var(--paper); box-shadow:3px 3px 0 var(--shadow)}
+  .tab2[aria-pressed="true"]{background:var(--sun); color:#3E2B18}
+  .cols{display:grid; gap:1.4rem}
+  @media (min-width:960px){.cols{grid-template-columns:300px 1fr}}
+  .list{display:grid; gap:.5rem; align-content:start}
+  .row{display:flex; gap:.35rem; align-items:stretch}
+  .row-pick{flex:1; text-align:left; font:inherit; font-size:var(--fs-sm); font-weight:700; cursor:pointer;
+            background:var(--paper); border:2px solid var(--ink); border-radius:12px; padding:.5rem .7rem;
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .row-pick[aria-current="true"]{background:var(--sun); color:#3E2B18}
+  .mini{font:inherit; font-size:.75rem; font-weight:800; cursor:pointer; width:2rem;
+        background:var(--paper); border:2px solid var(--ink); border-radius:10px}
+  .mini:hover{background:var(--sand)}
+  .mini.del:hover{background:var(--taste); color:#FFFCF4}
+  .form{display:grid; gap:.9rem; align-content:start; padding:1.4rem}
+  .fld{display:grid; gap:.3rem}
+  .fld label{font-size:var(--fs-xs); font-weight:800; color:var(--ink-3)}
+  .fld input,.fld textarea,.fld select{
+    font:inherit; font-size:var(--fs-sm); color:var(--ink); background:var(--cream);
+    border:2px solid var(--line); border-radius:12px; padding:.5rem .7rem; width:100%}
+  .fld textarea{min-height:6.5rem; line-height:1.8; resize:vertical}
+  .fld input:focus,.fld textarea:focus,.fld select:focus{border-color:var(--sun); outline:none}
+  .grid2{display:grid; gap:.9rem}
+  @media (min-width:640px){.grid2{grid-template-columns:1fr 1fr}}
+  .grid5{display:grid; gap:.6rem; grid-template-columns:repeat(auto-fit,minmax(84px,1fr))}
+  .metarow{display:grid; grid-template-columns:6.5rem 1fr 2rem; gap:.4rem; align-items:center}
+  .hint{font-size:var(--fs-xs); color:var(--ink-3); line-height:1.7}
+  .bar2{display:flex; gap:.6rem; flex-wrap:wrap; margin:1.2rem 0}
+  .empty{padding:2rem 1.4rem; text-align:center; color:var(--ink-3); font-size:var(--fs-sm)}
+  .prev-wrap{margin-top:1.4rem}
+  .prev-wrap h3.lbl{font-size:var(--fs-xs); font-weight:800; color:var(--ink-3); margin-bottom:.5rem}
+  code{font-family:var(--num); background:var(--sand); padding:.05em .35em; border-radius:5px}
+</style>
+</head>
+<body>
+<header class="ad-head">
+  <div class="ad-head-in">
+    <p class="ad-title"><span>23.5°</span> 內容編輯器</p>
+    <span class="ad-state" id="state">載入中…</span>
+    <a class="btn" href="index.html">看網站 →</a>
+  </div>
+</header>
+
+<div class="wrap" id="login" hidden>
+  <div class="sticker" style="max-width:420px; margin:3rem auto; padding:1.8rem 1.6rem; display:grid; gap:1rem">
+    <h2 style="font-size:1.3rem">登入後台</h2>
+    <p class="hint" id="loginHint">請輸入管理密碼。</p>
+    <div class="fld">
+      <label for="pw">密碼</label>
+      <input id="pw" type="password" autocomplete="current-password">
+    </div>
+    <button type="button" class="btn btn-sun" id="doLogin" style="justify-self:start">登入</button>
+    <p class="hint" id="loginErr" style="color:var(--taste)"></p>
+  </div>
+</div>
+
+<main class="wrap" id="main" hidden>
+  <div class="warn" id="modeNote">
+    <span id="modeText"></span>
+  </div>
+
+  <div class="bar2">
+    <button type="button" class="btn btn-sun" id="save" hidden>儲存並發佈到網站</button>
+    <button type="button" class="btn btn-sun" id="download">下載 content.json</button>
+    <button type="button" class="btn" id="copy">複製 JSON</button>
+    <button type="button" class="btn" id="reload">放棄修改，重新載入</button>
+    <button type="button" class="btn" id="syncNow" hidden>立刻同步到 GitHub</button>
+    <button type="button" class="btn" id="logout" hidden>登出</button>
+  </div>
+  <p class="hint" id="syncNote" style="margin:-.6rem 0 1rem"></p>
+
+  <div class="tabs2" role="group" aria-label="選擇要編輯的區塊" id="tabs"></div>
+
+  <div class="cols">
+    <div>
+      <div class="list" id="list"></div>
+      <button type="button" class="btn" id="add" style="margin-top:.8rem">＋ 新增一筆</button>
+    </div>
+    <div>
+      <div class="sticker form" id="form"><p class="empty">左邊挑一筆來編輯，或按「＋ 新增一筆」。</p></div>
+      <div class="prev-wrap" id="prevWrap" hidden>
+        <h3 class="lbl">網站上會長這樣</h3>
+        <div id="preview"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(function(){
+  var SRC = 'src/content.json', KEY = 'shuishang-admin-draft';
+  var live = false;   // true = 有後端，可以直接存；false = 靜態檔案模式
+  var TABS = [
+    {id:'taste',   label:'品味 美食',   kind:'venue', path:['venues','taste']},
+    {id:'culture', label:'回歸 景點',   kind:'venue', path:['venues','culture']},
+    {id:'grow',    label:'生長 店家',   kind:'venue', path:['venues','grow']},
+    {id:'crops',   label:'三大農產',    kind:'crop',  path:['crops']},
+    {id:'news',    label:'相關報導',    kind:'news',  path:['news']}
+  ];
+  var NEWS_KINDS = [
+    ['k-news','新聞報導'], ['k-civic','公民新聞'],
+    ['k-gov','官方資源'],  ['k-blog','品牌專文'], ['k-blog','旅遊部落格']
+  ];
+  var META_KEYS = ['地址','電話','營業','Email','合作','別名','全名','產品'];
+
+  var data = null, tab = TABS[0], sel = -1, dirty = false, sync = null;
+  var $ = function(id){ return document.getElementById(id); };
+
+  function coll(t){ return t.path.reduce(function(o,k){ return o[k]; }, data); }
+  function mark(d){
+    dirty = d;
+    $('state').textContent = d ? '有未儲存的修改（已暫存於瀏覽器）' : '已載入';
+    $('state').classList.toggle('dirty', d);
+    if(d) try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){}
+  }
+  function title(item){
+    return item.name || item.title || '（未命名）';
+  }
+
+  // ── 啟動：先問伺服器有沒有後端 ─────────────────────────
+  var LIVE_NOTE = '<b>改完按「儲存並發佈到網站」就會立刻生效。</b>' +
+    '存檔時伺服器會把內容寫進磁碟並重新產生所有頁面，訪客重新整理就看得到新內容。' +
+    '編輯到一半的東西會暫存在這台瀏覽器裡，關掉分頁不會不見。';
+  var FILE_NOTE = '<b>目前是檔案模式（沒有連到後端）。</b>' +
+    '這裡的編輯<strong>不會直接改到線上網站</strong>。流程是：在這裡改 → 下載 ' +
+    '<code>content.json</code> → 覆蓋 <code>src/content.json</code> → 執行 ' +
+    '<code>node build.js</code> → commit &amp; push。' +
+    '要能線上直接存檔，請用 <code>npm start</code> 啟動伺服器再開這一頁。';
+
+  function boot(){
+    fetch('api/session', {cache:'no-store'}).then(function(r){
+      return r.ok ? r.json() : null;
+    }).catch(function(){ return null; }).then(function(sess){
+      if(!sess){ live = false; enter(); return; }        // 沒有後端 → 檔案模式
+      live = true;
+      if(!sess.configured){
+        show('login');
+        $('doLogin').disabled = true;
+        $('pw').disabled = true;
+        $('loginHint').innerHTML = '伺服器還沒設定 <code>ADMIN_PASSWORD</code> 環境變數，' +
+          '後台無法登入。在 Zeabur 的服務設定裡加上這個變數再重新部署。';
+        return;
+      }
+      sync = sess.sync || null;
+      if(sess.authed) enter(); else show('login');
+    });
+  }
+  function show(which){
+    $('login').hidden = (which !== 'login');
+    $('main').hidden  = (which === 'login');
+    if(which === 'login') setTimeout(function(){ $('pw').focus(); }, 50);
+  }
+  function enter(){
+    show('main');
+    $('modeText').innerHTML = live ? LIVE_NOTE : FILE_NOTE;
+    $('save').hidden = !live;
+    $('logout').hidden = !live;
+    renderSync();
+    load(false);
+  }
+
+  function renderSync(){
+    var note = $('syncNote'), btn = $('syncNow');
+    if(!live || !sync || !sync.enabled){
+      note.textContent = live ? '（沒有設定 GitHub 自動同步，線上內容不會寫回 repo。）' : '';
+      btn.hidden = true;
+      return;
+    }
+    btn.hidden = false;
+    var l = sync.last, when = function(t){ return new Date(t).toLocaleString('zh-TW', {hour12:false}); };
+    var delay = sync.delayMs < 60000
+      ? Math.round(sync.delayMs / 1000) + ' 秒'
+      : Math.round(sync.delayMs / 60000) + ' 分鐘';
+    var msg = '自動同步到 ' + sync.repo + '：停止編輯 ' + delay + '後推送一次。';
+    if(l && l.state === 'pending') msg += '　⏳ 預計 ' + when(l.at) + ' 推送';
+    else if(l && l.state === 'ok') msg += '　✓ 已推送 ' + l.sha + '（' + when(l.at) + '）';
+    else if(l && l.state === 'skipped') msg += '　✓ ' + l.reason + '（' + when(l.at) + '）';
+    else if(l && l.state === 'error') msg += '　⚠ 上次失敗：' + l.error;
+    note.textContent = msg;
+  }
+
+  $('syncNow').onclick = function(){
+    var btn = this, was = btn.textContent;
+    btn.disabled = true; btn.textContent = '同步中…';
+    fetch('api/sync', {method:'POST'})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        btn.disabled = false; btn.textContent = was;
+        if(j.error){ alert(j.error); return; }
+        sync = j.sync; renderSync();
+      })
+      .catch(function(e){ btn.disabled = false; btn.textContent = was; alert('同步失敗：' + e.message); });
+  };
+
+  // ── 載入內容 ───────────────────────────────────────────
+  function load(fresh){
+    var draft = null;
+    if(!fresh){ try{ draft = JSON.parse(localStorage.getItem(KEY)); }catch(e){} }
+    if(draft){ data = draft; render(); mark(true); return; }
+    fetch(live ? 'api/content' : SRC, {cache:'no-store'}).then(function(r){
+      if(r.status === 401){ show('login'); throw new Error('__auth__'); }
+      if(!r.ok) throw new Error(r.status);
+      return r.json();
+    }).then(function(j){
+      data = j; localStorage.removeItem(KEY); render(); mark(false);
+    }).catch(function(err){
+      if(err.message === '__auth__') return;
+      $('state').textContent = '讀不到內容';
+      $('form').innerHTML = '<p class="empty">讀不到 <code>' + (live ? 'api/content' : SRC) +
+        '</code>（' + err.message + '）。<br><br>' +
+        '直接用 file:// 開啟這一頁會被瀏覽器擋掉讀取。<br>' +
+        '請用 <code>npm start</code>（有後端）或 <code>python3 -m http.server 8000</code>' +
+        '（純檔案）啟動後再開這一頁。</p>';
+    });
+  }
+
+  // ── 登入 / 登出 / 儲存 ────────────────────────────────
+  function doLogin(){
+    var btn = $('doLogin');
+    btn.disabled = true; $('loginErr').textContent = '';
+    fetch('api/login', {method:'POST', headers:{'content-type':'application/json'},
+                        body: JSON.stringify({password: $('pw').value})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
+      .then(function(res){
+        btn.disabled = false;
+        if(!res.ok){ $('loginErr').textContent = res.j.error || '登入失敗。'; return; }
+        $('pw').value = ''; enter();
+      })
+      .catch(function(e){ btn.disabled = false; $('loginErr').textContent = '連不到伺服器：' + e.message; });
+  }
+  $('doLogin').onclick = doLogin;
+  $('pw').onkeydown = function(e){ if(e.key === 'Enter') doLogin(); };
+  $('logout').onclick = function(){
+    if(dirty && !confirm('還有未儲存的修改，確定要登出？')) return;
+    fetch('api/logout', {method:'POST'}).then(function(){ location.reload(); });
+  };
+  $('save').onclick = function(){
+    var btn = this, was = btn.textContent;
+    btn.disabled = true; btn.textContent = '儲存中…';
+    fetch('api/content', {method:'PUT', headers:{'content-type':'application/json'}, body: json()})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, status:r.status, j:j}; }); })
+      .then(function(res){
+        btn.disabled = false; btn.textContent = was;
+        if(res.status === 401){ show('login'); return; }
+        if(!res.ok){ alert('存檔失敗：' + (res.j.error || res.status)); return; }
+        localStorage.removeItem(KEY);
+        mark(false);
+        $('state').textContent = '已發佈到網站 ✓';
+        $('state').classList.remove('dirty');
+        if(res.j.sync){ sync = res.j.sync; renderSync(); }
+      })
+      .catch(function(e){ btn.disabled = false; btn.textContent = was; alert('連不到伺服器：' + e.message); });
+  };
+
+  // ── 左側清單 ───────────────────────────────────────────
+  function renderTabs(){
+    $('tabs').innerHTML = '';
+    TABS.forEach(function(t){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'tab2';
+      b.setAttribute('aria-pressed', String(t === tab));
+      b.textContent = t.label + '（' + coll(t).length + '）';
+      b.onclick = function(){ tab = t; sel = -1; render(); };
+      $('tabs').appendChild(b);
+    });
+  }
+  function renderList(){
+    var items = coll(tab);
+    $('list').innerHTML = '';
+    items.forEach(function(item, i){
+      var row = document.createElement('div'); row.className = 'row';
+      var pick = document.createElement('button');
+      pick.type = 'button'; pick.className = 'row-pick';
+      pick.setAttribute('aria-current', String(i === sel));
+      pick.textContent = (i+1) + '. ' + title(item);
+      pick.onclick = function(){ sel = i; render(); };
+      row.appendChild(pick);
+      [['↑', -1], ['↓', 1]].forEach(function(mv){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'mini'; b.textContent = mv[0];
+        b.title = mv[1] < 0 ? '上移' : '下移';
+        b.disabled = (i + mv[1] < 0 || i + mv[1] >= items.length);
+        b.onclick = function(){
+          var j = i + mv[1];
+          items.splice(j, 0, items.splice(i, 1)[0]);
+          sel = (sel === i) ? j : sel; mark(true); render();
+        };
+        row.appendChild(b);
+      });
+      var del = document.createElement('button');
+      del.type = 'button'; del.className = 'mini del'; del.textContent = '✕'; del.title = '刪除';
+      del.onclick = function(){
+        if(!confirm('確定刪除「' + title(item) + '」？')) return;
+        items.splice(i, 1);
+        if(sel >= items.length) sel = items.length - 1;
+        mark(true); render();
+      };
+      row.appendChild(del);
+      $('list').appendChild(row);
+    });
+    if(!items.length) $('list').innerHTML = '<p class="empty">這個分類目前沒有資料。</p>';
+  }
+
+  // ── 表單 ───────────────────────────────────────────────
+  function field(label, value, oninput, opts){
+    opts = opts || {};
+    var w = document.createElement('div'); w.className = 'fld';
+    var l = document.createElement('label'); l.textContent = label;
+    var el = document.createElement(opts.tag || 'input');
+    if(opts.tag === 'select'){
+      opts.options.forEach(function(o, i){
+        var op = document.createElement('option');
+        op.value = String(i); op.textContent = o[1] + '（' + o[0] + '）';
+        el.appendChild(op);
+      });
+    }
+    el.value = value == null ? '' : value;
+    if(opts.placeholder) el.placeholder = opts.placeholder;
+    if(opts.type) el.type = opts.type;
+    el.oninput = function(){ oninput(el.value); mark(true); renderList(); renderPreview(); };
+    if(opts.tag === 'select') el.onchange = el.oninput;
+    l.htmlFor = el.id = 'f' + Math.random().toString(36).slice(2, 8);
+    w.appendChild(l); w.appendChild(el);
+    return w;
+  }
+
+  function venueForm(v){
+    var f = $('form');
+    f.appendChild(field('名稱', v.name, function(x){ v.name = x; }));
+    f.appendChild(field('主打特色（會顯示成圓角標籤）', v.feature, function(x){ v.feature = x; },
+                        {placeholder:'主打 · 仙草甜麵醬'}));
+    f.appendChild(field('介紹文', v.text, function(x){ v.text = x; }, {tag:'textarea'}));
+
+    var mh = document.createElement('p'); mh.className = 'hint';
+    mh.textContent = '資訊欄（地址欄會自動生成 Google 地圖連結；留白的欄位不會顯示）';
+    f.appendChild(mh);
+    v.meta = v.meta || [];
+    v.meta.forEach(function(m, i){
+      var row = document.createElement('div'); row.className = 'metarow';
+      var k = document.createElement('input'); k.value = m.k; k.setAttribute('list','metakeys');
+      k.oninput = function(){ m.k = k.value; mark(true); renderPreview(); };
+      var val = document.createElement('input'); val.value = m.v;
+      val.oninput = function(){ m.v = val.value; mark(true); renderPreview(); };
+      var x = document.createElement('button');
+      x.type='button'; x.className='mini del'; x.textContent='✕';
+      x.onclick = function(){ v.meta.splice(i,1); mark(true); render(); };
+      row.appendChild(k); row.appendChild(val); row.appendChild(x);
+      f.appendChild(row);
+    });
+    var addm = document.createElement('button');
+    addm.type='button'; addm.className='btn'; addm.textContent='＋ 加一列資訊';
+    addm.style.justifySelf='start';
+    addm.onclick = function(){ v.meta.push({k:'', v:''}); mark(true); render(); };
+    f.appendChild(addm);
+
+    var mp = document.createElement('p'); mp.className='hint';
+    mp.innerHTML = '<b>地圖圖釘</b>　填了 x／y 才會出現在首頁地圖上。' +
+      'x／y 是在地圖上的位置（0–100 的百分比，左上角是 0,0）；' +
+      'lx／ly 是名稱標籤相對圖釘的偏移（px，用來把擠在一起的店家拉開）；' +
+      'side 決定標籤往右(r)還是往左(l)；短名留白就用上面的名稱。';
+    f.appendChild(mp);
+    var has = document.createElement('button');
+    has.type='button'; has.className='btn'; has.style.justifySelf='start';
+    has.textContent = v.map ? '移除地圖圖釘' : '＋ 加上地圖圖釘';
+    has.onclick = function(){
+      if(v.map) delete v.map; else v.map = {x:40, y:50, side:'r', lx:13, ly:2};
+      mark(true); render();
+    };
+    if(v.map){
+      var g = document.createElement('div'); g.className = 'grid5';
+      [['x','x'],['y','y'],['lx','lx'],['ly','ly']].forEach(function(k){
+        g.appendChild(field(k[1], v.map[k[0]], function(x){ v.map[k[0]] = parseFloat(x) || 0; }, {type:'number'}));
+      });
+      g.appendChild(field('side', v.map.side, function(x){ v.map.side = (x === 'l' ? 'l' : 'r'); }));
+      f.appendChild(g);
+      f.appendChild(field('地圖上的短名（可留白）', v.map.label || '', function(x){
+        if(x) v.map.label = x; else delete v.map.label;
+      }));
+    }
+    f.appendChild(has);
+  }
+
+  function cropForm(c){
+    var f = $('form');
+    f.appendChild(field('編號（顯示在左上）', c.n, function(x){ c.n = x; }, {placeholder:'01'}));
+    f.appendChild(field('名稱', c.name, function(x){ c.name = x; }));
+    f.appendChild(field('標籤', c.tag, function(x){ c.tag = x; }, {placeholder:'MESONA · 深紅褐莖幹'}));
+    c.sections = c.sections || [];
+    c.sections.forEach(function(s, i){
+      f.appendChild(field('第 ' + (i+1) + ' 段標題', s.h, function(x){ s.h = x; }));
+      f.appendChild(field('第 ' + (i+1) + ' 段內文', s.p, function(x){ s.p = x; }, {tag:'textarea'}));
+    });
+    var add = document.createElement('button');
+    add.type='button'; add.className='btn'; add.style.justifySelf='start'; add.textContent='＋ 加一段';
+    add.onclick = function(){ c.sections.push({h:'', p:''}); mark(true); render(); };
+    f.appendChild(add);
+  }
+
+  function newsForm(n){
+    var f = $('form');
+    var idx = NEWS_KINDS.findIndex(function(k){ return k[0] === n.kind && k[1] === n.kindLabel; });
+    f.appendChild(field('來源性質', idx < 0 ? 0 : idx, function(x){
+      var k = NEWS_KINDS[parseInt(x, 10)]; n.kind = k[0]; n.kindLabel = k[1];
+    }, {tag:'select', options:NEWS_KINDS}));
+    f.appendChild(field('來源名稱', n.source, function(x){ n.source = x; }, {placeholder:'聯合報／記者〇〇〇'}));
+    f.appendChild(field('日期（可留白）', n.date, function(x){ n.date = x; }, {placeholder:'2025-11-30'}));
+    f.appendChild(field('標題', n.title, function(x){ n.title = x; }));
+    f.appendChild(field('摘要', n.summary, function(x){ n.summary = x; }, {tag:'textarea'}));
+    f.appendChild(field('原文網址', n.url, function(x){ n.url = x; }, {placeholder:'https://…'}));
+    var w = document.createElement('p'); w.className = 'hint';
+    w.textContent = '請填真實存在的報導；標籤要據實選擇，部落格或品牌專文不要標成新聞報導。';
+    f.appendChild(w);
+  }
+
+  // ── 預覽（一律用 textContent 填字，不會被內容裡的標籤影響）──
+  function el(tag, cls, text){
+    var e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(text != null) e.textContent = text;
+    return e;
+  }
+  function renderPreview(){
+    var items = coll(tab), item = items[sel];
+    $('prevWrap').hidden = !item;
+    if(!item) return;
+    var box = $('preview'); box.innerHTML = '';
+    if(tab.kind === 'venue'){
+      var a = el('article', 'venue sticker');
+      a.style.setProperty('--acc', 'var(--' + tab.id + ')');
+      a.style.setProperty('--acc-soft', 'var(--' + tab.id + '-soft)');
+      a.appendChild(el('p', 'venue-idx', 'NO. ' + String(sel+1).padStart(2, '0')));
+      a.appendChild(el('h3', null, item.name || '（未命名）'));
+      if(item.feature) a.appendChild(el('p', 'feat', item.feature));
+      a.appendChild(el('p', null, item.text || ''));
+      var meta = el('div', 'meta');
+      (item.meta || []).forEach(function(m){
+        if(!m.v) return;
+        var d = el('div');
+        d.appendChild(el('span', 'k', m.k));
+        d.appendChild(el('span', 'v', m.v));
+        meta.appendChild(d);
+      });
+      a.appendChild(meta);
+      box.appendChild(a);
+    } else if(tab.kind === 'crop'){
+      var c = el('article', 'crop sticker');
+      var id = el('div', 'crop-id');
+      id.appendChild(el('span', 'n', item.n || ''));
+      id.appendChild(el('h3', null, item.name || '（未命名）'));
+      if(item.tag) id.appendChild(el('span', 'tag', item.tag));
+      c.appendChild(id);
+      var body = el('div');
+      (item.sections || []).forEach(function(s){
+        var sec = el('section');
+        sec.appendChild(el('h4', null, s.h || ''));
+        sec.appendChild(el('p', null, s.p || ''));
+        body.appendChild(sec);
+      });
+      c.appendChild(body);
+      box.appendChild(c);
+    } else {
+      var it = el('div', 'item sticker');
+      var top = el('div', 'item-top');
+      top.appendChild(el('span', 'kind ' + (item.kind || 'k-news'), item.kindLabel || ''));
+      top.appendChild(el('span', 'item-src', (item.source || '') + (item.date ? '　·　' + item.date : '')));
+      it.appendChild(top);
+      it.appendChild(el('h3', null, item.title || '（未命名）'));
+      it.appendChild(el('p', null, item.summary || ''));
+      it.appendChild(el('span', 'item-go', '前往原文 ↗'));
+      box.appendChild(it);
+    }
+  }
+
+  function renderForm(){
+    var f = $('form'); f.innerHTML = '';
+    var item = coll(tab)[sel];
+    if(!item){ f.appendChild(el('p', 'empty', '左邊挑一筆來編輯，或按「＋ 新增一筆」。')); return; }
+    if(tab.kind === 'venue') venueForm(item);
+    else if(tab.kind === 'crop') cropForm(item);
+    else newsForm(item);
+  }
+
+  function render(){ renderTabs(); renderList(); renderForm(); renderPreview(); }
+
+  // ── 動作 ───────────────────────────────────────────────
+  $('add').onclick = function(){
+    var items = coll(tab);
+    if(tab.kind === 'venue') items.push({name:'新的據點', feature:'', text:'',
+      meta:[{k:'地址', v:''}, {k:'電話', v:''}, {k:'營業', v:''}]});
+    else if(tab.kind === 'crop') items.push({n:String(items.length+1).padStart(2,'0'),
+      name:'新的農產', tag:'', sections:[{h:'品種與風土', p:''}, {h:'種植與工序', p:''}]});
+    else items.push({kind:'k-news', kindLabel:'新聞報導', source:'', date:'', title:'新的報導', summary:'', url:''});
+    sel = items.length - 1; mark(true); render();
+    document.getElementById('form').scrollIntoView({block:'nearest'});
+  };
+  function json(){ return JSON.stringify(data, null, 2) + '\n'; }
+  $('download').onclick = function(){
+    var b = new Blob([json()], {type:'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = 'content.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  };
+  $('copy').onclick = function(){
+    var btn = this;
+    navigator.clipboard.writeText(json()).then(function(){
+      btn.textContent = '已複製 ✓';
+      setTimeout(function(){ btn.textContent = '複製 JSON'; }, 1800);
+    }, function(){ btn.textContent = '複製失敗，請用下載'; });
+  };
+  $('reload').onclick = function(){
+    if(dirty && !confirm('會放棄目前所有未儲存的修改，確定？')) return;
+    localStorage.removeItem(KEY); sel = -1; load(true);
+  };
+  addEventListener('beforeunload', function(e){ if(dirty){ e.preventDefault(); e.returnValue = ''; } });
+
+  var dl = document.createElement('datalist'); dl.id = 'metakeys';
+  META_KEYS.forEach(function(k){ var o = document.createElement('option'); o.value = k; dl.appendChild(o); });
+  document.body.appendChild(dl);
+
+  boot();
+})();
+</script>
+</body>
+</html>

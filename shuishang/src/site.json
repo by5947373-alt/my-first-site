@@ -1,0 +1,28 @@
+{
+  "nav": [
+    [
+      "index.html",
+      "首頁"
+    ],
+    [
+      "taste.html",
+      "品味"
+    ],
+    [
+      "culture.html",
+      "回歸"
+    ],
+    [
+      "grow.html",
+      "生長"
+    ],
+    [
+      "news.html",
+      "相關報導"
+    ],
+    [
+      "contact.html",
+      "聯絡我們"
+    ]
+  ]
+}
