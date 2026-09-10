@@ -88,9 +88,11 @@ function readBody(req, limit = 10_000) {
   });
 }
 
-async function serveIndex(res) {
+// Serves one known HTML file. The path is fixed at the call site, never
+// taken from the request, so there is nothing for a client to traverse.
+async function serveHTML(res, ...segments) {
   try {
-    const data = await readFile(join(__dirname, 'index.html'));
+    const data = await readFile(join(__dirname, ...segments));
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(data);
   } catch {
@@ -188,7 +190,12 @@ const server = createServer(async (req, res) => {
 
   // --- Static ---
   if (path === '/' || path === '/index.html') {
-    return serveIndex(res);
+    return serveHTML(res, 'index.html');
+  }
+
+  // Mobile POS — a single self-contained page, no server state of its own.
+  if (path === '/pos' || path === '/pos/' || path === '/pos/index.html') {
+    return serveHTML(res, 'pos', 'index.html');
   }
 
   res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
