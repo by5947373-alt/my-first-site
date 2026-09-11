@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#0D0F13">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="收銀台">
+<meta name="apple-mobile-web-app-title" content="RedBull小蜜蜂">
 <meta name="robots" content="noindex">
-<title>夜攤收銀台</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥃</text></svg>">
+<title>RedBull小蜜蜂</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐝</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
@@ -366,6 +366,7 @@ section{margin-top:18px}
 
 @media (max-width:360px){
   .brand span{display:none}
+  .brand b{font-size:14px}
   .today b{font-size:17px}
   .iconbtn{padding:8px 8px}
   .tile .n{font-size:15px}
@@ -382,7 +383,7 @@ section{margin-top:18px}
 <div class="app">
   <header>
     <div class="brand">
-      <b>夜攤收銀台</b>
+      <b>RedBull小蜜蜂</b>
       <span id="bizday">—</span>
     </div>
     <div class="today">
@@ -1061,12 +1062,12 @@ function download(name, text){
 $("exportCsv").addEventListener("click", function(){
   var rows = ordersFor(ledgerDay);
   if(!rows.length){ alert("這天沒有紀錄可以匯出。"); return; }
-  download("收銀台-" + ledgerDay + ".csv", toCSV(rows));
+  download("RedBull小蜜蜂-" + ledgerDay + ".csv", toCSV(rows));
 });
 $("exportAll").addEventListener("click", function(){
   var rows = orders.filter(function(o){ return o && Array.isArray(o.items); }).sort(function(a,b){ return a.ts - b.ts; });
   if(!rows.length){ alert("還沒有任何紀錄。"); return; }
-  download("收銀台-全部-" + bizDay(Date.now()) + ".csv", toCSV(rows));
+  download("RedBull小蜜蜂-全部-" + bizDay(Date.now()) + ".csv", toCSV(rows));
 });
 
 /* ============ 菜單設定 ============ */
@@ -1334,7 +1335,7 @@ function shareMenu(){
     } else showLinkDlg(url);
   }
   if(navigator.share){
-    navigator.share({title:"夜攤收銀台菜單", text:"點開這個連結，就會套用最新的菜單", url:url})
+    navigator.share({title:"RedBull小蜜蜂 菜單", text:"點開這個連結，就會套用最新的菜單", url:url})
       .catch(function(err){ if(!err || err.name !== "AbortError") copyOrShow(); });
   } else copyOrShow();
 }
