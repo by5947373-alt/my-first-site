@@ -260,6 +260,13 @@ section{margin-top:18px}
 .lhead{display:flex;align-items:baseline;gap:8px;margin:20px 0 2px}
 .lhead h4{margin:0;font-family:var(--disp);font-weight:700;font-size:13px;letter-spacing:.03em}
 .lhead span{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--fg3)}
+.filterrow{display:flex;align-items:center;gap:10px;margin:20px 0 -8px}
+.filterrow > span{font-size:11px;letter-spacing:.08em;color:var(--fg3);flex:0 0 auto}
+.pmfilter{display:flex;gap:1px;margin-left:auto;background:var(--line);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.pmfilter button{padding:7px 11px;background:var(--bg3);color:var(--fg3);font-family:var(--mono);font-size:12px;white-space:nowrap}
+.pmfilter button.on{background:var(--bg2);color:var(--fg);box-shadow:inset 0 -2px 0 var(--pm,var(--fg2))}
+.pmfilter button[data-f="cash"]{--pm:var(--cash)}
+.pmfilter button[data-f="linepay"]{--pm:var(--lp)}
 
 .tally{display:flex;flex-direction:column}
 .tally .row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
@@ -487,9 +494,10 @@ section{margin-top:18px}
         <div class="stat"><em>客單價</em><b class="num" id="stAvg">$0</b></div>
       </div>
       <div class="split" id="split"></div>
+      <div class="filterrow" id="filterRow"><span>品項統計範圍</span><div class="pmfilter" id="pmFilter"></div></div>
       <div class="lhead"><h4>品項統計</h4><span id="tallyNote"></span></div>
       <div class="tally" id="tally"></div>
-      <div class="lhead"><h4>口味罐數</h4><span>單罐＋套組內含</span></div>
+      <div class="lhead"><h4>口味罐數</h4><span id="flavNote">單罐＋套組內含</span></div>
       <div class="tally" id="flavTally"></div>
       <div class="lhead"><h4>訂單</h4><span id="orderNote"></span></div>
       <div id="orders"></div>
@@ -564,6 +572,7 @@ function toast(msg){
 
 var PM = {cash:"現金", linepay:"LINE Pay", other:"未分類"};
 function payOf(o){ return o.pay || (o.cash != null ? "cash" : "other"); }
+function pmOf(o){ var p = payOf(o); return has(PM, p) ? p : "other"; }
 
 /* ============ 菜單資料 ============ */
 var HUES = {blue:"#62A8DC", violet:"#A98BE0", amber:"#E9A93C", red:"#EE6B4D",
@@ -683,7 +692,7 @@ function hueOfKey(k){
 var cart = lsGet("pos.cart", {}); if(!cart || typeof cart !== "object" || Array.isArray(cart)) cart = {};
 var draft = lsGet("pos.setdraft", []); if(!Array.isArray(draft)) draft = [];
 var orders = lsGet("pos.orders", []); if(!Array.isArray(orders)) orders = [];
-var ledgerDay = bizDay(Date.now());
+var ledgerDay = bizDay(Date.now()), tallyPM = "all";
 var cash = 0, method = "cash";
 
 /* 菜單改動後：清掉購物車裡已不存在的品項、不合用的套組半成品 */
@@ -956,7 +965,7 @@ function lineType(l){
   if((IDX[l.k] && IDX[l.k].sec.kind === "flavor") || /^can_/.test(l.k)) return "can";
   return "item";
 }
-function tallyHTML(rows, max){
+function tallyHTML(rows, max, emptyMsg){
   return rows.length ? rows.map(function(r){
     return '<div class="row" style="--hue:' + r.hue + '">'
       + '<span class="nm">' + esc(r.n) + '</span>'
@@ -964,7 +973,7 @@ function tallyHTML(rows, max){
       + '<span class="qt">×' + r.q + '</span>'
       + (r.amt != null ? '<span class="am">' + money(r.amt) + '</span>' : '')
       + '</div>';
-  }).join("") : '<p class="empty">這天還沒有紀錄</p>';
+  }).join("") : '<p class="empty">' + esc(emptyMsg || "這天還沒有紀錄") + '</p>';
 }
 function paintLedger(){
   var all = ordersFor(ledgerDay), live = all.filter(function(o){ return !o.voided; });
@@ -977,33 +986,49 @@ function paintLedger(){
 
   /* 付款方式分計 */
   var by = {cash:{amt:0,n:0}, linepay:{amt:0,n:0}, other:{amt:0,n:0}};
-  live.forEach(function(o){ var p = payOf(o); if(!has(by, p)) p = "other"; by[p].amt += o.total; by[p].n++; });
+  live.forEach(function(o){ var p = pmOf(o); by[p].amt += o.total; by[p].n++; });
   var sp = '<div class="sp cash"><em><i></i>現金</em><b class="num">' + money(by.cash.amt) + '</b><span>' + by.cash.n + ' 筆</span></div>'
          + '<div class="sp lp"><em><i></i>LINE Pay</em><b class="num">' + money(by.linepay.amt) + '</b><span>' + by.linepay.n + ' 筆</span></div>';
   if(by.other.n) sp += '<div class="sp oth"><em><i></i>未分類</em><b class="num">' + money(by.other.amt) + '</b><span>' + by.other.n + ' 筆</span></div>';
   $("split").innerHTML = sp;
 
+  /* 品項統計範圍：全部，或單看某一種付款方式 */
+  var avail = ["cash","linepay","other"].filter(function(k){ return by[k].n; });
+  if(avail.length < 2) tallyPM = "all";
+  else if(tallyPM !== "all" && avail.indexOf(tallyPM) < 0) tallyPM = "all";
+  $("filterRow").style.display = avail.length < 2 ? "none" : "";
+  $("pmFilter").innerHTML = avail.length < 2 ? "" :
+    ["all"].concat(avail).map(function(k){
+      return '<button data-f="' + k + '"' + (k === tallyPM ? ' class="on"' : '') + '>' + (k === "all" ? "全部" : PM[k]) + '</button>';
+    }).join("");
+  var tset = tallyPM === "all" ? live : live.filter(function(o){ return pmOf(o) === tallyPM; });
+  var scope = tallyPM === "all" ? "" : PM[tallyPM];
+  var noneMsg = scope ? ("這天沒有用" + scope + "結帳的單") : "這天還沒有紀錄";
+
   /* 品項統計（依結帳當下記下的名稱與價格） */
   var t = Object.create(null);
-  live.forEach(function(o){ o.items.forEach(function(l){
+  tset.forEach(function(o){ o.items.forEach(function(l){
     if(!t[l.k]) t[l.k] = {n:l.n, q:0, amt:0, hue:hueOfKey(l.k)};
     t[l.k].q += l.q; t[l.k].amt += l.p * l.q;
   });});
   var rows = Object.keys(t).map(function(k){ return t[k]; }).sort(function(a,b){ return b.q - a.q || b.amt - a.amt; });
-  $("tallyNote").textContent = rows.length ? (rows.reduce(function(a,r){ return a + r.q; },0) + " 個單位") : "";
-  $("tally").innerHTML = tallyHTML(rows, rows.length ? rows[0].q : 1);
+  $("tallyNote").textContent = rows.length
+    ? ((scope ? scope + " · " : "") + rows.reduce(function(a,r){ return a + r.q; },0) + " 個單位")
+    : "";
+  $("tally").innerHTML = tallyHTML(rows, rows.length ? rows[0].q : 1, noneMsg);
 
   /* 口味罐數：單罐 + 套組內含，依口味名稱加總 */
   var f = Object.create(null), fhue = HUES[FSEC ? FSEC.hue : "blue"];
   function addF(name, q){ if(!(name in f)) f[name] = 0; f[name] += q; }
-  live.forEach(function(o){ o.items.forEach(function(l){
+  tset.forEach(function(o){ o.items.forEach(function(l){
     var ty = lineType(l);
     if(ty === "can") addF(l.n, l.q);
     else if(ty === "set") (Array.isArray(l.fn) ? l.fn : setFlavs(l.k).map(flavName)).forEach(function(nm){ addF(nm, l.q); });
   });});
   var frows = Object.keys(f).map(function(k){ return {n:k, q:f[k], hue:fhue}; })
                   .sort(function(a,b){ return b.q - a.q; });
-  $("flavTally").innerHTML = tallyHTML(frows, frows.length ? frows[0].q : 1);
+  $("flavNote").textContent = "單罐＋套組內含" + (scope ? " · " + scope : "");
+  $("flavTally").innerHTML = tallyHTML(frows, frows.length ? frows[0].q : 1, noneMsg);
 
   /* 訂單 */
   $("orderNote").textContent = all.length ? (all.length + " 筆") : "";
@@ -1028,6 +1053,10 @@ $("orders").addEventListener("click", function(e){
   orders.forEach(function(o){ if(o.id === id){ o.voided = true; o.voidedAt = Date.now(); } });
   lsSet("pos.orders", orders);
   paintLedger(); paintToday();
+});
+$("pmFilter").addEventListener("click", function(e){
+  var b = e.target.closest("[data-f]"); if(!b) return;
+  tallyPM = b.dataset.f; buzz(6); paintLedger();
 });
 $("dPrev").addEventListener("click", function(){ ledgerDay = dayShift(ledgerDay,-1); paintLedger(); });
 $("dNext").addEventListener("click", function(){ ledgerDay = dayShift(ledgerDay, 1); paintLedger(); });
