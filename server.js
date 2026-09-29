@@ -101,6 +101,21 @@ async function serveHTML(res, ...segments) {
   }
 }
 
+// The service worker is revalidated on every load, so it must not be cached.
+async function serveWorker(res, ...segments) {
+  try {
+    const data = await readFile(join(__dirname, ...segments));
+    res.writeHead(200, {
+      'Content-Type': 'application/javascript; charset=utf-8',
+      'Cache-Control': 'no-cache',
+    });
+    res.end(data);
+  } catch {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Not found');
+  }
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname;
@@ -194,8 +209,17 @@ const server = createServer(async (req, res) => {
   }
 
   // Mobile POS — a single self-contained page, no server state of its own.
-  if (path === '/pos' || path === '/pos/' || path === '/pos/index.html') {
+  // The trailing slash matters: its service worker registers relative to the
+  // page URL, so /pos alone would look for the worker one directory too high.
+  if (path === '/pos') {
+    res.writeHead(301, { Location: '/pos/' });
+    return res.end();
+  }
+  if (path === '/pos/' || path === '/pos/index.html') {
     return serveHTML(res, 'pos', 'index.html');
+  }
+  if (path === '/pos/sw.js') {
+    return serveWorker(res, 'pos', 'sw.js');
   }
 
   res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
