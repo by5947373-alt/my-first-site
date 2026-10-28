@@ -222,6 +222,16 @@ const server = createServer(async (req, res) => {
     return serveWorker(res, 'pos', 'sw.js');
   }
 
+  // Invoice organizer — a static page; data goes straight to the owner's
+  // Google Apps Script, so this server stores nothing for it.
+  if (path === '/invoice') {
+    res.writeHead(301, { Location: '/invoice/' });
+    return res.end();
+  }
+  if (path === '/invoice/' || path === '/invoice/index.html') {
+    return serveHTML(res, 'invoice', 'index.html');
+  }
+
   res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
   res.end('Not found');
 });
