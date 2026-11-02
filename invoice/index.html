@@ -62,7 +62,7 @@ textarea{resize:vertical;min-height:44px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chips button{border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:7px 13px;font-size:14px}
 .chips button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
-.items{font-size:13px;color:var(--fg2);background:var(--chip);border-radius:10px;padding:8px 10px;margin-bottom:12px;display:none;white-space:pre-line}
+select{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:11px 12px;font-size:16px;appearance:none}
 .list h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
 .list h2 .nav{margin-left:auto;display:flex;gap:6px}
 .list h2 .nav button{border:1px solid var(--line);background:var(--bg);border-radius:8px;width:34px;height:30px}
@@ -108,16 +108,22 @@ dialog h3{margin:0 0 12px;font-size:17px}
     <div class="preview" id="preview"><img id="previewImg" alt="發票照片"><button type="button" class="x" id="clearPhoto" aria-label="移除照片">✕</button></div>
     <div class="status" id="scanStatus"></div>
 
-    <div class="row">
-      <div class="field"><label for="date">發票日期</label><input type="date" id="date" required></div>
-      <div class="field"><label for="total">總金額</label><input type="number" id="total" inputmode="numeric" min="0" step="1" placeholder="0" required></div>
+    <div class="field">
+      <label for="docType">票據類型</label>
+      <select id="docType">
+        <option>電子發票</option><option>傳統發票</option><option>計程車收據</option><option>高鐵票</option><option>其他收據</option>
+      </select>
     </div>
     <div class="row">
-      <div class="field"><label for="number">發票號碼</label><input type="text" id="number" placeholder="AB12345678" maxlength="10" autocapitalize="characters"></div>
+      <div class="field"><label for="date">日期</label><input type="date" id="date" required></div>
+      <div class="field"><label for="total">金額</label><input type="number" id="total" inputmode="numeric" min="0" step="1" placeholder="0" required></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="number">發票號碼（選填）</label><input type="text" id="number" placeholder="AB12345678" maxlength="10" autocapitalize="characters"></div>
       <div class="field"><label for="sellerId">賣方統編</label><input type="text" id="sellerId" inputmode="numeric" maxlength="8" placeholder="8 位數字"></div>
     </div>
     <div class="field"><label for="sellerName">店家名稱</label><input type="text" id="sellerName" placeholder="留空會用統編自動查"></div>
-    <div class="items" id="items"></div>
+    <div class="field"><label for="items">品項</label><textarea id="items" rows="1" placeholder="選填"></textarea></div>
     <div class="field">
       <label>類別</label>
       <div class="chips" id="cats"></div>
@@ -183,9 +189,11 @@ dialog h3{margin:0 0 12px;font-size:17px}
     }
     if (!cfg.url) return Promise.reject(new Error('請先到「設定」填 Apps Script 網址'));
     var req;
+    // POST 不設 Content-Type → 瀏覽器用 text/plain，不會觸發 CORS 預檢
     if (fn === 'saveInvoice') {
-      // 不設 Content-Type → 瀏覽器用 text/plain，不會觸發 CORS 預檢
       req = fetch(cfg.url, { method: 'POST', body: JSON.stringify({ token: args[0], invoice: args[1] }) });
+    } else if (fn === 'readReceipt') {
+      req = fetch(cfg.url, { method: 'POST', body: JSON.stringify({ action: 'read', token: args[0], photo: args[1] }) });
     } else {
       var q = fn === 'listMonth' ? 'list&month=' + encodeURIComponent(args[1] || '') : 'ping';
       req = fetch(cfg.url + (cfg.url.indexOf('?') < 0 ? '?' : '&') + 'action=' + q + '&token=' + encodeURIComponent(args[0]));
@@ -196,7 +204,9 @@ dialog h3{margin:0 0 12px;font-size:17px}
     }, function () { throw new Error('連不到 Apps Script，請檢查網址與網路'); }).then(unwrap);
   }
   function unwrap(res) {
-    if (res && res.ok === false) { var e = new Error(res.error || '發生錯誤'); e.duplicate = res.duplicate; throw e; }
+    if (res && res.ok === false) {
+      var e = new Error(res.error || '發生錯誤'); e.duplicate = res.duplicate; e.noKey = res.noKey; throw e;
+    }
     return res;
   }
 
@@ -308,50 +318,84 @@ dialog h3{margin:0 0 12px;font-size:17px}
     catch (e) { return String.fromCharCode.apply(null, bytes); }
   }
 
+  var readSeq = 0;      // 換照片時讓舊的辨識結果作廢
+  var aiOff = false;    // 後端沒設 API 金鑰就不再呼叫
+
   function onFile(input) {
     var file = input.files && input.files[0];
     input.value = '';
     if (!file) return;
+    var seq = ++readSeq;
     status($('saveStatus'));
     status($('scanStatus'), 'info', '讀取照片中…');
     loadImage(file).then(function (img) {
-      // 上傳用：縮到長邊 1600px，夠看清楚又不會太大
-      photoDataUrl = drawScaled(img, 0, 0, img.naturalWidth, img.naturalHeight, 1600).toDataURL('image/jpeg', 0.78);
+      // 上傳用：縮到長邊 1568px（Claude 讀圖的上限），夠清楚又不會太大
+      photoDataUrl = drawScaled(img, 0, 0, img.naturalWidth, img.naturalHeight, 1568).toDataURL('image/jpeg', 0.8);
       $('previewImg').src = photoDataUrl;
       $('preview').style.display = 'block';
-      status($('scanStatus'), 'info', '辨識 QR 碼中…');
+      status($('scanStatus'), 'info', aiOff ? '辨識 QR 碼中…' : 'AI 讀取文字中…（約 5–20 秒）');
+      var photo = photoDataUrl;
       // 讓畫面先更新再開始比較慢的辨識
       setTimeout(function () {
-        var r = null;
-        try { r = scanInvoiceQR(img); } catch (e) {}
+        var qr = null;
+        try { qr = scanInvoiceQR(img); } catch (e) {}
         URL.revokeObjectURL(img.src);
-        if (r) {
-          source = 'QR';
-          $('number').value = r.number; $('date').value = r.date; $('total').value = r.total;
-          $('sellerId').value = r.sellerId; $('sellerName').value = '';
-          $('total').dataset.sales = r.sales;
-          showItems(r.items);
-          status($('scanStatus'), 'ok', '✓ 已讀到電子發票：' + r.number + '，金額 ' + money(r.total));
-        } else {
-          source = 'manual';
-          status($('scanStatus'), 'warn', typeof jsQR === 'function'
-            ? '沒讀到 QR 碼（傳統發票或照片不清楚），請手動填寫。電子發票可以靠近一點、對準左邊的 QR 碼再拍一次。'
-            : 'QR 辨識元件沒載入（可能沒網路），請手動填寫。');
-          $('total').focus();
-        }
+        var ai = aiOff ? Promise.resolve(null) : call('readReceipt', [cfg.token, photo]);
+        ai.then(function (r) { return { ai: r }; }, function (e) { return { err: e }; }).then(function (out) {
+          if (seq !== readSeq) return;
+          if (out.err && out.err.noKey) aiOff = true;
+          fillFromReading(qr, out.ai, out.err);
+        });
       }, 30);
     }).catch(function (e) { status($('scanStatus'), 'err', e.message); });
   }
 
-  function showItems(text) {
-    $('items').textContent = text ? '品項\n' + text : '';
-    $('items').style.display = text ? 'block' : 'none';
+  // 合併 AI 讀到的文字與 QR 碼。QR 碼的號碼、日期、金額是機器直接編碼的，比讀字可靠，有就優先用。
+  function fillFromReading(qr, ai, err) {
+    if (!qr && !ai) {
+      source = 'manual';
+      var why = err ? err.message + '。' : aiOff ? 'AI 讀取未啟用（還沒設定 API 金鑰），也沒讀到 QR 碼。' : '';
+      status($('scanStatus'), err && !err.noKey ? 'err' : 'warn', why + '請手動填寫。');
+      $('total').focus();
+      return;
+    }
+    var v = ai || {};
+    if (qr) {
+      v.docType = '電子發票';
+      v.number = qr.number; v.date = qr.date; v.total = qr.total; v.sales = qr.sales;
+      v.sellerId = qr.sellerId || v.sellerId;
+      if (!v.items) v.items = qr.items;
+    }
+    source = ai ? 'AI' : 'QR';
+    $('docType').value = v.docType || '其他收據';
+    $('date').value = v.date || todayISO();
+    $('total').value = v.total === '' || v.total == null ? '' : v.total;
+    if (v.sales !== '' && v.sales != null) $('total').dataset.sales = v.sales; else delete $('total').dataset.sales;
+    $('number').value = v.number || '';
+    $('sellerId').value = v.sellerId || '';
+    $('sellerName').value = v.sellerName || '';
+    $('items').value = v.items || '';
+    $('note').value = v.note || '';
+    if (v.category) { category = v.category; renderCats(); }
+
+    var missing = [];
+    if (!v.date) missing.push('日期');
+    if (v.total === '' || v.total == null) missing.push('金額');
+    var head = '✓ ' + (ai ? 'AI 讀取' : '已讀到 QR 碼') + '：' + $('docType').value +
+      (v.total !== '' && v.total != null ? '，' + money(v.total) : '');
+    var tail = missing.length ? '。沒讀到' + missing.join('、') + '，請補上' : '。請核對後儲存';
+    if (!ai && err && !err.noKey) tail += '（AI 讀取失敗：' + err.message + '）';
+    status($('scanStatus'), missing.length ? 'warn' : 'ok', head + tail);
   }
+
+  function showItems(text) { $('items').value = text || ''; }
 
   function resetForm() {
     photoDataUrl = ''; source = 'manual';
     $('preview').style.display = 'none'; $('previewImg').removeAttribute('src');
-    ['number', 'total', 'sellerId', 'sellerName', 'note'].forEach(function (id) { $(id).value = ''; });
+    readSeq++;
+    ['number', 'total', 'sellerId', 'sellerName', 'note', 'items'].forEach(function (id) { $(id).value = ''; });
+    $('docType').value = '電子發票';
     delete $('total').dataset.sales;
     $('date').value = todayISO();
     showItems('');
@@ -365,17 +409,18 @@ dialog h3{margin:0 0 12px;font-size:17px}
       date: $('date').value,
       number: $('number').value.trim().toUpperCase(),
       total: $('total').value,
-      sales: $('total').dataset.sales != null && source === 'QR' ? $('total').dataset.sales : '',
+      sales: $('total').dataset.sales != null && source !== 'manual' ? $('total').dataset.sales : '',
+      docType: $('docType').value,
       sellerId: $('sellerId').value.trim(),
       sellerName: $('sellerName').value.trim(),
       category: category,
-      items: $('items').textContent.replace(/^品項\n/, ''),
+      items: $('items').value.trim(),
       note: $('note').value.trim(),
       photo: photoDataUrl,
       source: source,
       allowDuplicate: !!allowDuplicate,
     };
-    if (!inv.date || inv.total === '') { status($('saveStatus'), 'err', '請至少填日期和總金額'); return; }
+    if (!inv.date || inv.total === '') { status($('saveStatus'), 'err', '請至少填日期和金額'); return; }
     if (inv.number && !/^[A-Z]{2}\d{8}$/.test(inv.number)) { status($('saveStatus'), 'err', '發票號碼要是 2 個英文字母 + 8 個數字'); return; }
 
     $('save').disabled = true;
@@ -447,8 +492,9 @@ dialog h3{margin:0 0 12px;font-size:17px}
     status($('settingsStatus'), 'info', '連線中…');
     call('ping', [cfg.token]).then(function (res) {
       store('url', cfg.url); store('token', cfg.token);
+      aiOff = res.aiEnabled === false;
       $('settings').close();
-      toast('✓ 已連上「' + res.spreadsheet + '」');
+      toast('✓ 已連上「' + res.spreadsheet + '」' + (aiOff ? '（AI 讀取未啟用）' : ''));
       refresh();
     }).catch(function (e) { cfg = old; status($('settingsStatus'), 'err', e.message); });
   };
