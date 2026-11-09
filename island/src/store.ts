@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import type { Cat, Poi } from './data';
+import { DEFAULT_AVATAR, type Avatar, type Pose, type Shot } from './avatar';
 
 // ── 存在瀏覽器裡的東西（無痕模式等存不了也沒關係） ──
 const load = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; } };
 const save = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 存不了就算了 */ } };
-const K_TRIP = 'shuishang-island-trip', K_SEEN = 'shuishang-island-visited', K_INTRO = 'shuishang-island-intro';
+const K_TRIP = 'shuishang-island-trip', K_SEEN = 'shuishang-island-visited', K_INTRO = 'shuishang-island-intro', K_ME = 'shuishang-island-avatar';
 
 export type Tab = 'spots' | 'links' | 'trip';
 /** 一天中的時間 0→1：0.22 清晨、0.5 白天、0.78 黃昏、0.95 夜晚 */
@@ -54,6 +55,22 @@ interface State {
   /** 探索日誌：第一次點開每個景點的時間 */
   visited: Record<string, number>;
 
+  // 我的角色
+  panel: 'index' | 'character';
+  charTab: 'look' | 'trip' | 'photo';
+  avatar: Avatar;
+  /** 角色站的地點（小島 id 或景點 id） */
+  place: string;
+  facing: 'front' | 'back';
+  pose: Pose;
+  shot: Shot;
+  mascot: boolean;
+  /** 角色正沿著小旅行路線走 */
+  walking: boolean;
+  /** 每次 +1，鏡頭就飛到角色身邊 */
+  meTick: number;
+  setAvatar: (a: Partial<Avatar>) => void;
+
   select: (id: string | null) => void;
   hover: (id: string | null) => void;
   setFilter: (c: Cat | 'all') => void;
@@ -99,6 +116,18 @@ export const useStore = create<State>((set, get) => ({
   toast: null,
   visited: load<Record<string, number>>(K_SEEN, {}),
 
+  panel: 'index',
+  charTab: 'look',
+  avatar: { ...DEFAULT_AVATAR, ...load<Partial<Avatar>>(K_ME, {}) },
+  place: 'lighthouse',
+  facing: 'front',
+  pose: '揮手',
+  shot: '全身特寫',
+  mascot: false,
+  walking: false,
+  meTick: 0,
+  setAvatar: (a) => set((s) => { const avatar = { ...s.avatar, ...a }; save(K_ME, avatar); return { avatar }; }),
+
   select: (id) => set((s) => {
     const visited = id && !s.visited[id] ? { ...s.visited, [id]: Date.now() } : s.visited;
     if (visited !== s.visited) save(K_SEEN, visited);
@@ -108,6 +137,8 @@ export const useStore = create<State>((set, get) => ({
       visited,
       // 選了景點就打開右側面板顯示介紹
       sidebar: id ? true : s.sidebar,
+      // 點景點時，右側面板切回景點介紹（角色走行程時例外，保持角色面板）
+      panel: id && !s.walking ? 'index' : s.panel,
     };
   }),
   hover: (id) => { if (get().hovered !== id) set({ hovered: id }); },

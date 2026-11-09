@@ -254,3 +254,50 @@ html, body{ margin:0; height:100%; overflow:hidden; background:#FBF1D6; overscro
 @media (prefers-reduced-motion:reduce){
   .isl-tool:hover svg, .isl-time-btn:hover svg, .isl-label:hover{ animation:none !important; }
 }
+
+/* ── 我的角色 ── */
+.isl-side.is-char .isl-side-head{ position:relative; padding-bottom:0; }
+.isl-side-x.is-show{ display:block; top:26px; right:22px; }
+.isl-tabs.is-orange button{ border:0; background:transparent; font-size:.95rem; }
+.isl-tabs.is-orange button.is-on{ background:var(--acc-main); color:#fff; }
+.isl-field{ margin:0 0 16px; }
+.isl-field > p{ margin:0 0 8px; font-size:.82rem; font-weight:700; color:var(--ink2); }
+.isl-field .isl-search{ margin:0; }
+.isl-hint2{ margin:8px 0 0; font-size:.76rem; line-height:1.6; color:var(--ink3); }
+.isl-opt{ display:flex; flex-wrap:wrap; gap:7px; }
+.isl-opt button{ padding:9px 15px; min-height:40px; border:1.5px solid var(--line); border-radius:999px; background:#fff; font-weight:700; font-size:.88rem; transition:transform .35s cubic-bezier(.34,1.8,.5,1), background .2s; }
+.isl-opt button:active{ transform:scale(.88); transition-duration:.08s; }
+.isl-opt button[aria-pressed="true"]{ background:var(--acc-main); border-color:var(--acc-main); color:#fff; }
+.isl-swatch{ display:flex; flex-wrap:wrap; gap:9px; align-items:center; }
+.isl-swatch button{ width:38px; height:38px; padding:0; border-radius:50%; border:2px solid rgba(60,40,20,.12); transition:transform .35s cubic-bezier(.34,1.8,.5,1); }
+.isl-swatch button:hover{ transform:scale(1.12); }
+.isl-swatch button[aria-pressed="true"]{ box-shadow:0 0 0 3px var(--paper), 0 0 0 5.5px var(--acc-main); }
+.isl-swatch-pick{ position:relative; width:38px; height:38px; border-radius:50%; background:conic-gradient(#F07E6E,#F6CF57,#6FBF8E,#6AA8E0,#C48BD6,#F07E6E); cursor:pointer; overflow:hidden; }
+.isl-swatch-pick input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+.isl-two{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.isl-two button, .isl-wide, .isl-place{ display:grid; place-items:center; min-height:48px; padding:8px 12px; border:1.5px solid var(--line); border-radius:14px; background:#fff; font-weight:700; font-size:.92rem; }
+.isl-two button[aria-pressed="true"]{ border-color:var(--acc-main); color:var(--acc-main) !important; background:#FFF6EF; }
+.isl-place{ border:1.5px dashed var(--acc-main); color:var(--acc-main); background:#FFF9F4; }
+.isl-wide{ width:100%; }
+.isl-wide.is-on{ border-color:#6FBF8E; background:#EEF8EE; color:#3E8B5A !important; }
+.isl-acc{ border-top:1px solid var(--line); }
+.isl-acc-head{ display:flex; justify-content:space-between; align-items:center; width:100%; padding:16px 2px; border:0; background:none; font-weight:800; font-size:1rem; }
+.isl-acc-head i{ font-style:normal; color:var(--acc-main); font-size:1.3rem; }
+.isl-acc-body{ padding-bottom:6px; animation:isl-in .35s ease both; }
+.isl-side-foot{ display:grid; grid-template-columns:auto auto 1fr; gap:10px; padding:14px 26px; border-top:1px solid var(--line); background:var(--paper); }
+.isl-btn2.is-accent{ background:var(--acc-main); border-color:var(--acc-main); color:#fff !important; }
+.isl-shutter{ display:block; width:100%; margin:6px 0 14px; padding:16px; border:0; border-radius:18px; background:var(--acc-main); color:#fff !important; font-size:1.1rem; font-weight:900; box-shadow:0 10px 22px -12px rgba(217,101,59,.8); transition:transform .35s cubic-bezier(.34,1.8,.5,1); }
+.isl-shutter:active{ transform:scale(.92); transition-duration:.08s; }
+.isl-flash{ position:fixed; inset:0; z-index:200; background:#fff; pointer-events:none; animation:isl-flash .5s ease-out forwards; }
+@keyframes isl-flash{ from{ opacity:.9; } to{ opacity:0; } }
+.isl-photo{ margin:0 0 10px; padding:10px; border-radius:16px; background:rgba(60,40,20,.05); animation:isl-card-boing .5s cubic-bezier(.3,1.6,.5,1) both; }
+.isl-photo img{ display:block; width:100%; border-radius:8px; box-shadow:0 8px 20px -10px rgba(40,25,10,.5); transform:rotate(-1.5deg); }
+.isl-photo figcaption{ display:flex; align-items:center; gap:10px; margin-top:12px; }
+.isl-photo .isl-btn2{ text-decoration:none; }
+/* 「我」的名牌 */
+.isl-me-tag{ pointer-events:auto; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; padding:5px 12px 5px 6px; border:2px solid #fff; border-radius:999px; background:var(--paper, #FDF8F2); box-shadow:0 6px 14px -6px rgba(60,40,20,.5); font:800 12px/1 "Noto Sans TC",sans-serif; color:#262019; animation:isl-pop .45s cubic-bezier(.3,1.6,.5,1) both; }
+.isl-me-tag b{ display:grid; place-items:center; height:20px; padding:0 7px; border-radius:10px; background:#262019; color:#fff; font-size:11px; }
+.isl-me-tag span{ color:#D9653B; }
+.isl-me-tag.is-mascot{ padding:4px 10px; background:#3A3330; color:#fff; border-color:#6FC05A; }
+.is-sheet.is-char{ height:min(52dvh, 500px); }
+.is-sheet .isl-side-foot{ padding:10px 18px; }

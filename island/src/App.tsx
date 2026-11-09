@@ -4,6 +4,7 @@ import { PerformanceMonitor } from '@react-three/drei';
 import { Scene } from './scene/Scene';
 import { CAT, CATS, LINKS, PERSONAS, QUIZ, type Cat, type Poi } from './data';
 import { PRESETS, useStore, poiById, type Tab } from './store';
+import { CharacterPanel } from './Character';
 
 const coarse = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 const canFull = typeof document !== 'undefined' && !!document.documentElement.requestFullscreen;
@@ -74,7 +75,7 @@ export function App() {
           flat
           dpr={dpr}
           camera={{ position: [0, 40, 40], zoom: 20, near: 0.1, far: 200 }}
-          gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+          gl={{ antialias: true, alpha: true, powerPreference: 'high-performance', preserveDrawingBuffer: true }}
           onPointerMissed={(e) => {
             // 只有點在 3D 畫面的空白處才取消選取；點標籤、按鈕不算
             const ev = e as MouseEvent;
@@ -151,6 +152,7 @@ function TopBar({ mobile }: { mobile: boolean }) {
   const showLabels = useStore((x) => x.showLabels), showCarriers = useStore((x) => x.showCarriers);
   const showLinks = useStore((x) => x.showLinks), paused = useStore((x) => x.paused), aerial = useStore((x) => x.aerial);
   const journal = useStore((x) => x.journal), quiz = useStore((x) => x.quiz), sidebar = useStore((x) => x.sidebar);
+  const charOpen = useStore((x) => x.sidebar && x.panel === 'character');
   const s = { ...useStore.getState(), showLabels, showCarriers, showLinks, paused, aerial, journal, quiz, sidebar };
   const [full, setFull] = useState(false);
   useEffect(() => {
@@ -175,8 +177,13 @@ function TopBar({ mobile }: { mobile: boolean }) {
   const right = (
     <>
       <Tool d={I.home} label="全景" onClick={goHome} cls="is-pill" />
-      <Tool d={I.role} label="角色" on={s.quiz} onClick={() => s.set({ quiz: !s.quiz, journal: false })} cls="is-pill" title="你是水上的哪一種旅人？" />
-      <Tool d={I.list} label="清單" on={s.sidebar} onClick={() => s.set({ sidebar: !s.sidebar })} cls="is-pill" />
+      <Tool d={I.role} label="角色" on={charOpen} cls="is-pill" title="我的角色：外觀、行程、拍照"
+        onClick={() => {
+          const g = useStore.getState();
+          if (charOpen) g.set({ panel: 'index', walking: false });
+          else { g.select(null); g.set({ sidebar: true, panel: 'character', meTick: g.meTick + 1 }); }
+        }} />
+      <Tool d={I.list} label="清單" on={s.sidebar && !charOpen} onClick={() => s.set(charOpen ? { panel: 'index' } : { sidebar: !s.sidebar })} cls="is-pill" />
       <button type="button" className="isl-tool is-pill is-q" onClick={() => s.set({ intro: 0 })} title="使用說明" aria-label="使用說明">?</button>
     </>
   );
@@ -231,7 +238,11 @@ function Sidebar({ mobile }: { mobile: boolean }) {
   const query = useStore((s) => s.query);
   const sel = useStore((s) => s.selected);
   const linkCount = useMemo(() => LINKS.filter((l) => pois.some((p) => p.id === l.from) && pois.some((p) => p.id === l.to)).length, [pois]);
+  const panel = useStore((s) => s.panel);
   if (!open) return null;
+  if (panel === 'character') {
+    return <aside className={'isl-side is-char' + (mobile ? ' is-sheet' : '')} aria-label="我的角色"><CharacterPanel mobile={mobile} /></aside>;
+  }
   const st = useStore.getState();
   const tabs: [Tab, string, number][] = [['spots', '景點', pois.length], ['links', '連結', linkCount], ['trip', '小旅行', trip.length]];
   return (
@@ -454,6 +465,7 @@ function Intro({ mobile }: { mobile: boolean }) {
     { h: '這座島就是水上鄉', p: `照著水上鄉真實的行政區輪廓，做成一座 3D 微縮島。點一棟建築，或用${mobile ? '「清單」' : '右側清單'}探索 ${st.pois.length} 個景點。` },
     { h: '小人在幫景點串起關係', p: '選一個景點就會亮出它的在地連結。點路上扛著貨物的小人，可以看到他正把什麼，從哪裡搬到哪裡。' },
     { h: '水上的一天會自己流動', p: `上方可以切換清晨、白天、黃昏、夜晚的光線，也可以按暫停${mobile ? '；手機版請點「時間」' : ''}。` },
+    { h: '做一個自己的角色', p: '按「角色」可以換髮型、衣服和配件，站到海上的小島，讓角色沿著小旅行走一趟，再和吉祥物仙草仔拍張照。' },
   ];
   const s = steps[step];
   const last = step === steps.length - 1;

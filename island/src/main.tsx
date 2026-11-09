@@ -5,6 +5,10 @@ import css from './styles.css?inline';
 import { App } from './App';
 import { buildPois } from './data';
 import { useStore } from './store';
+import gsap from 'gsap';
+
+// 畫面很卡時，動畫照實際時間走完（不要變成慢動作），鏡頭才不會飛很久才到
+gsap.ticker.lagSmoothing(0);
 
 function webgl() {
   try {

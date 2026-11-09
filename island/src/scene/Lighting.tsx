@@ -84,10 +84,10 @@ export function Lighting({ shadow }: { shadow: number }) {
         color="#FFF1D8"
         castShadow
         shadow-mapSize={[shadow, shadow]}
-        shadow-camera-left={-24}
-        shadow-camera-right={24}
-        shadow-camera-top={16}
-        shadow-camera-bottom={-16}
+        shadow-camera-left={-32}
+        shadow-camera-right={32}
+        shadow-camera-top={22}
+        shadow-camera-bottom={-22}
         shadow-camera-near={1}
         shadow-camera-far={90}
         shadow-bias={-0.0008}

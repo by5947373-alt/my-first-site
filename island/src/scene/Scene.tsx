@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { ContactShadows } from '@react-three/drei';
 import { buildWorld } from '../world';
 import { useStore, frozen } from '../store';
 import { GROW, WIND } from './kit';
@@ -12,6 +11,8 @@ import { CameraRig } from './CameraRig';
 import { TripRoute } from './TripRoute';
 import { Lighting, StreetLamps } from './Lighting';
 import { LinkLines, Carriers } from './Links';
+import { Ocean } from './Ocean';
+import { Player } from './Avatar';
 
 export function Scene({ interactive, zoomable, mobile }: { interactive: boolean; zoomable: boolean; mobile: boolean }) {
   const pois = useStore((s) => s.pois);
@@ -39,11 +40,11 @@ export function Scene({ interactive, zoomable, mobile }: { interactive: boolean;
       <Landmarks pois={pois} world={world} />
       <Traffic world={world} />
       <Clouds />
+      <Ocean />
+      <Player world={world} />
       <TripRoute />
       <LinkLines />
       <Carriers />
-      {/* 島嶼漂浮在奶油色背景上的柔和投影（只算一次） */}
-      <ContactShadows position={[0, -2.4, 0.6]} scale={[52, 36]} blur={3.2} opacity={0.32} far={4} frames={1} color="#8A6A3E" resolution={512} />
       <CameraRig interactive={interactive} zoomable={zoomable} />
     </>
   );
