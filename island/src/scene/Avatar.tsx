@@ -150,7 +150,7 @@ function Balloon() {
 }
 
 /** 角色本體（臉朝 +z）。 */
-export function AvatarFigure({ a, armL, armR, body }: { a: AvatarT; armL: Ref; armR: Ref; body: Ref }) {
+export function AvatarFigure({ a, armL, armR, body, held }: { a: AvatarT; armL: Ref; armR: Ref; body: Ref; held?: Ref }) {
   const H = a.height === '矮' ? 0.88 : a.height === '高' ? 1.12 : 1;
   const B = a.build === '瘦' ? 0.85 : a.build === '圓' ? 1.22 : 1;
   const top = mat(a.topColor), skin = mat(a.skin), bot = mat(a.bottomColor), shoe = mat(a.shoes);
@@ -184,7 +184,8 @@ export function AvatarFigure({ a, armL, armR, body }: { a: AvatarT; armL: Ref; a
         <group ref={armR} position={[0.15 * B, 0.39, 0]}>
           <mesh geometry={G.sph} material={sleeve} position={[0, -0.08, 0]} scale={[0.07, 0.17, 0.07]} castShadow />
           <mesh geometry={G.sph} material={skin} position={[0, -0.17, 0]} scale={0.055} />
-          <group position={[0, -0.19, 0]}><Held a={a} /></group>
+          {/* 手上的東西：跟著手移動，但永遠保持正立（見 Player 的姿勢計算） */}
+          <group ref={held} position={[0, -0.19, 0]} rotation-order="ZYX"><Held a={a} /></group>
         </group>
       </group>
       {/* 大頭 */}
@@ -235,6 +236,7 @@ export function Player({ world }: { world: World }) {
   const root = useRef<THREE.Group>(null!);
   const turn = useRef<THREE.Group>(null!);
   const body = useRef<THREE.Group | null>(null), armL = useRef<THREE.Group | null>(null), armR = useRef<THREE.Group | null>(null);
+  const held = useRef<THREE.Group | null>(null);
   const ring = useRef<THREE.Mesh>(null!);
   const target = useMemo(() => placeInfo(place, world), [place, world]);
   const walk = useRef({ seg: 0, s: 0, wait: 0, path: [] as THREE.Vector3[], names: [] as string[] });
@@ -330,6 +332,8 @@ export function Player({ world }: { world: World }) {
       }
     }
     L.rotation.set(lx, 0, lz); R.rotation.set(rx, 0, rz);
+    // 抵銷手臂的旋轉，手上的仙草茶、相機、地圖才不會跟著倒過來
+    held.current?.rotation.set(-rx, 0, -rz);
     B.position.y = by;
     B.rotation.y = spin;
     // 腳下的圈圈：面板開著時亮橘色，平常淡淡的
@@ -347,7 +351,7 @@ export function Player({ world }: { world: World }) {
       <group ref={turn} onClick={cheer}
         onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }}
         onPointerOut={() => { document.body.style.cursor = ''; }}>
-        <AvatarFigure a={a} armL={armL} armR={armR} body={body} />
+        <AvatarFigure a={a} armL={armL} armR={armR} body={body} held={held} />
         <mesh visible={false} position={[0, 0.5, 0]} scale={[0.6, 1.1, 0.6]}><boxGeometry /></mesh>
         {mascot && <group position={[0.52, 0, 0.05]}><Mascot /></group>}
       </group>
