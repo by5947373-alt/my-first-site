@@ -15,7 +15,7 @@ import type { World } from '../world';
 export const PLAYER = new THREE.Vector3();
 
 /** 角色可以站的地點：先是小島，再是幾個景點前面。 */
-export const PLACE_ORDER = ['lighthouse', 'beach', 'harbor', 'flower', 'star', 'tropic', 'station', 'market', 'river', 'butterfly', 'sugar', 'coffee'];
+export const PLACE_ORDER = ['lighthouse', 'beach', 'harbor', 'flower', 'star', 'tropic', 'hall', 'market', 'river', 'tunnel', 'butterfly', 'sugar', 'coffee'];
 
 export function placeInfo(id: string, world?: World): { pos: THREE.Vector3; name: string } | null {
   const it = ISLETS.find((x) => x.id === id);
