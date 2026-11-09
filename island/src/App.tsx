@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
 import { Scene } from './scene/Scene';
@@ -7,62 +7,42 @@ import { useStore, poiById } from './store';
 
 const coarse = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 
+// 瀏覽器全螢幕（iPhone Safari 不支援，按鈕就不顯示）
+const canFull = typeof document !== 'undefined' && !!document.documentElement.requestFullscreen;
+
 export function App() {
-  const host = useRef<HTMLDivElement>(null!);
   const [full, setFull] = useState(false);
-  const [engaged, setEngaged] = useState(false);
-  const [visible, setVisible] = useState(true);
   const [dpr, setDpr] = useState(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
   const [mobile, setMobile] = useState(() => window.innerWidth < 720);
   const selected = useStore((s) => s.selected);
 
   useEffect(() => {
     const on = () => setMobile(window.innerWidth < 720);
+    const fs = () => setFull(!!document.fullscreenElement);
     addEventListener('resize', on);
-    return () => removeEventListener('resize', on);
-  }, []);
-
-  // 捲出畫面就暫停算圖，省電也不拖慢頁面其他部分
-  useEffect(() => {
-    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { rootMargin: '120px' });
-    io.observe(host.current);
-    return () => io.disconnect();
+    document.addEventListener('fullscreenchange', fs);
+    return () => { removeEventListener('resize', on); document.removeEventListener('fullscreenchange', fs); };
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('isl-lock', full);
-    return () => document.documentElement.classList.remove('isl-lock');
-  }, [full]);
-
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      const s = useStore.getState();
-      if (s.selected) s.select(null);
-      else if (full) setFull(false);
-    };
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') useStore.getState().select(null); };
     addEventListener('keydown', key);
     return () => removeEventListener('keydown', key);
-  }, [full]);
+  }, []);
 
-  // 手機嵌在頁面裡時：可以點建築，但拖曳交給頁面捲動；進入全螢幕才能旋轉縮放
-  const interactive = !coarse || full;
-  const zoomable = full || (engaged && !coarse);
+  const toggleFull = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  };
 
   return (
-    <div
-      ref={host}
-      className={'isl' + (full ? ' is-full' : '') + (selected ? ' has-card' : '')}
-      onPointerDown={() => setEngaged(true)}
-      onPointerLeave={() => setEngaged(false)}
-    >
+    <div className={'isl' + (selected ? ' has-card' : '')}>
       <Canvas
         className="isl-canvas"
         orthographic
         shadows
         flat
         dpr={dpr}
-        frameloop={visible ? 'always' : 'never'}
         camera={{ position: [0, 40, 40], zoom: 20, near: 0.1, far: 200 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         onPointerMissed={(e) => {
@@ -73,13 +53,13 @@ export function App() {
         aria-label="水上鄉 3D 微縮島嶼地圖"
       >
         <PerformanceMonitor onDecline={() => setDpr(1)} />
-        <Scene interactive={interactive} zoomable={zoomable} mobile={mobile} />
+        <Scene interactive zoomable mobile={mobile} />
       </Canvas>
 
       <div className="isl-top">
         <div className="isl-title">
           <b>23.5° 水上島</b>
-          <span>水上鄉行政區輪廓・人文地產景探索地圖</span>
+          <span>嘉義水上鄉・人文地產景 3D 探索地圖</span>
         </div>
         <div className="isl-tools">
           <button type="button" className="isl-btn isl-compass" title="指北針（點一下回到全景）" aria-label="指北針" onClick={goHome}>
@@ -90,10 +70,12 @@ export function App() {
             <span>全景</span>
           </button>
           <TripButton />
-          <button type="button" className="isl-btn" onClick={() => setFull(!full)} aria-pressed={full} title={full ? '離開全螢幕' : '全螢幕探索'}>
-            <Icon d={full ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'} />
-            <span>{full ? '離開' : '全螢幕'}</span>
-          </button>
+          {canFull && (
+            <button type="button" className="isl-btn" onClick={toggleFull} aria-pressed={full} title={full ? '離開全螢幕' : '全螢幕'}>
+              <Icon d={full ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'} />
+              <span>{full ? '離開' : '全螢幕'}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -101,15 +83,12 @@ export function App() {
       <InfoCard />
       <TripPanel />
 
-      {coarse && !full ? (
-        <button type="button" className="isl-start" onClick={() => setFull(true)}>
-          <Icon d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /> 進入全螢幕，旋轉縮放島嶼
-        </button>
-      ) : (
-        <p className="isl-hint" aria-hidden="true">
-          {coarse ? '單指旋轉・雙指縮放・點建築看介紹' : zoomable ? '拖曳旋轉・右鍵平移・滾輪縮放・點擊建築' : '拖曳旋轉・點一下地圖後可用滾輪縮放・點擊建築'}
-        </p>
-      )}
+      <p className="isl-hint" aria-hidden="true">
+        {coarse ? '單指旋轉・雙指縮放・點建築看介紹' : '拖曳旋轉・右鍵平移・滾輪縮放・點擊建築'}
+      </p>
+      <p className="isl-credit">
+        地圖資料 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> 貢獻者（ODbL）・道路為示意路線
+      </p>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// 把 OpenStreetMap 原始資料（../tools/ring.json、../tools/lines.json）轉成 3D 島嶼用的幾何。
+// 把 OpenStreetMap 原始資料（data/ring.json、data/lines.json）轉成 3D 島嶼用的幾何。
 // 座標系和首頁舊版 SVG 地圖、assets/map-data.js 的圖釘一致：1000 × 625 的畫框，
 // 所以後台填的圖釘 x / y（百分比）可以直接放到島上。
 //
@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const TOOLS = join(HERE, '..', '..', 'tools');
+const TOOLS = join(HERE, '..', 'data');
 const ring = JSON.parse(readFileSync(join(TOOLS, 'ring.json'), 'utf8'));
 const lines = JSON.parse(readFileSync(join(TOOLS, 'lines.json'), 'utf8'));
 

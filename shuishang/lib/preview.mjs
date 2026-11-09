@@ -1,5 +1,5 @@
 // 把六頁打包成單一 HTML 預覽檔（給只能放一頁的地方用）。網站本身用不到。
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, frontMatter } from './render.mjs';
 import { renderSite } from './render.mjs';
@@ -74,10 +74,7 @@ export function buildPreview(content) {
     '<script>\n' + read('assets', 'site.js') + '\n</script>\n' +
     '<script>\n' + JS + '\n</script>\n' +
     '<script>\n' + pages['assets/map-data.js'] + '\n</script>\n' +
-    // 3D 島嶼（island/ 建置產生），沒建置過就略過
-    (existsSync(p('assets', 'island', 'island.js'))
-      ? '<script>\n' + read('assets', 'island', 'island.js').replace(/<\/script/gi, '<\\/script') + '\n</script>\n'
-      : '');
+    '<script>\n' + read('assets', 'map.js') + '\n</script>\n';
   writeFileSync(p('tools', 'preview.html'), out, 'utf8');
   return Buffer.byteLength(out);
 }

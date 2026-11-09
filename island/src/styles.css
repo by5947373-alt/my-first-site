@@ -3,15 +3,14 @@
   --isl-bg1:#FBF1D6; --isl-bg2:#F3E2B8; --isl-ink:#3E3326; --isl-ink2:#7A6A55;
   --isl-panel:rgba(255,252,244,.94); --isl-line:rgba(120,92,52,.16);
   --isl-shadow:0 10px 30px -12px rgba(96,70,30,.35), 0 2px 6px -2px rgba(96,70,30,.18);
-  position:relative; width:100%; height:100%; overflow:hidden; border-radius:inherit;
+  position:fixed; inset:0; height:100dvh; overflow:hidden;
   background:radial-gradient(120% 90% at 50% 38%, #FFF8E6 0%, var(--isl-bg1) 45%, var(--isl-bg2) 100%);
   color:var(--isl-ink); font-family:"Noto Sans TC","PingFang TC",system-ui,sans-serif;
   -webkit-tap-highlight-color:transparent; user-select:none;
 }
-.isl.is-full{ position:fixed; inset:0; z-index:1000; border-radius:0; height:100dvh; }
-html.isl-lock, html.isl-lock body{ overflow:hidden; }
+html, body{ margin:0; height:100%; overflow:hidden; background:#FBF1D6; overscroll-behavior:none; }
 .isl-canvas{ position:absolute !important; inset:0; }
-.isl-top, .isl-cats, .isl-card, .isl-trip, .isl-hint, .isl-start{ z-index:40; }
+.isl-top, .isl-cats, .isl-card, .isl-trip, .isl-hint, .isl-credit{ z-index:40; }
 .isl button{ font:inherit; color:inherit; cursor:pointer; }
 .isl svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
 
@@ -98,7 +97,9 @@ html.isl-lock, html.isl-lock body{ overflow:hidden; }
 /* ── 操作提示 ── */
 .isl-hint{ position:absolute; left:50%; bottom:14px; transform:translateX(-50%); margin:0; padding:6px 14px; border-radius:999px; background:rgba(62,51,38,.72); color:#FFF8EA; font-size:.76rem; white-space:nowrap; pointer-events:none; transition:opacity .3s; }
 .isl.has-card .isl-hint{ opacity:0; }
-.isl-start{ position:absolute; left:50%; bottom:14px; transform:translateX(-50%); display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border:0; border-radius:999px; background:#3E3326; color:#FFF8EA !important; font-weight:800; font-size:.88rem; box-shadow:var(--isl-shadow); white-space:nowrap; }
+
+.isl-credit{ position:absolute; right:12px; bottom:8px; margin:0; font-size:.66rem; color:var(--isl-ink2); opacity:.8; }
+.isl-credit a{ color:inherit; }
 
 /* ── 手機 ── */
 @media (max-width:719px){
@@ -116,8 +117,9 @@ html.isl-lock, html.isl-lock body{ overflow:hidden; }
   @keyframes isl-sheet{ from{ opacity:0; transform:translateY(40px); } }
   .isl-trip{ left:10px; right:10px; width:auto; bottom:10px; max-height:55%; }
   .isl.has-card .isl-trip{ display:none; }
-  .isl-start, .isl-hint{ bottom:10px; }
-  .isl.has-card .isl-start{ display:none; }
+  .isl-hint{ bottom:26px; }
+  .isl-credit{ left:0; right:0; bottom:6px; text-align:center; }
+  .isl.has-card .isl-credit{ display:none; }
 }
 @media (prefers-reduced-motion:reduce){
   .isl *{ animation:none !important; transition:none !important; }

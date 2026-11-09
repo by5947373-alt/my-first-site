@@ -3,12 +3,13 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "23.5° 水上 —— 3D 低多邊形微縮島嶼（React Three Fiber）",
+  "description": "23.5° 水上島 —— 嘉義水上鄉 3D 低多邊形微縮島嶼（獨立網站）",
   "scripts": {
     "geo": "node scripts/geo.mjs",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@react-three/drei": "^9.117.3",

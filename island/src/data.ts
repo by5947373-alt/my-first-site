@@ -1,9 +1,10 @@
 // 島上的景點、分類與道路。
 //
-// 店家／景點的「位置、地址、電話、營業時間」來自 assets/map-data.js（window.SHUISHANG_SPOTS），
-// 也就是後台編輯的 src/content.json —— 後台改圖釘位置，島上的建築也會跟著搬家。
-// 這裡只補上 3D 模型種類、人文地產景分類和介紹文字。
+// 店家／景點的「位置、地址、電話、營業時間」在 src/spots.json；
+// 這裡補上 3D 模型種類、人文地產景分類和介紹文字。
+// spots.json 的 x / y 是 1000 × 625 畫框的百分比座標（和 geo.json 同一個座標系）。
 import { pctToWorld, toWorld, type V2 } from './geo';
+import SPOTS from './spots.json';
 
 export type Cat = 'ren' | 'wen' | 'di' | 'chan' | 'jing';
 export const CATS: { id: Cat; label: string; en: string; color: string }[] = [
@@ -39,7 +40,6 @@ export interface Poi {
 }
 
 interface Spot { c: string; n: string; x: number; y: number; f: string; a: string | null; t: string | null; h: string | null; e: string | null }
-declare global { interface Window { SHUISHANG_SPOTS?: Spot[] } }
 
 type Def = Omit<Poi, 'pos' | 'feature'> & { feature?: string; px?: V2; match?: string };
 
@@ -85,21 +85,21 @@ const DEFS: Def[] = [
 
 const FALLBACK_CAT: Record<string, Cat> = { taste: 'ren', culture: 'wen', grow: 'chan' };
 
-/** 合併靜態定義與 map-data.js 的即時資料。 */
-export function buildPois(spots: Spot[] = window.SHUISHANG_SPOTS || []): Poi[] {
+/** 合併模型定義與 spots.json 的店家資料。 */
+export function buildPois(spots: Spot[] = SPOTS as Spot[]): Poi[] {
   const used = new Set<string>();
   const out: Poi[] = [];
   for (const d of DEFS) {
     const s = d.match ? spots.find((x) => x.n === d.match) : undefined;
     if (s) used.add(s.n);
     const pos = s ? pctToWorld(s.x, s.y) : d.px ? toWorld(d.px) : null;
-    if (!pos) continue; // 後台刪掉了這個據點
+    if (!pos) continue; // spots.json 裡刪掉了這個據點
     out.push({
       id: d.id, name: d.name, cat: d.cat, model: d.model, rot: d.rot, minor: d.minor, text: d.text,
       pos, feature: s?.f || d.feature || '', addr: s?.a, tel: s?.t, hours: s?.h, email: s?.e,
     });
   }
-  // 後台新增、這裡還沒設定模型的據點：放一棟通用小店
+  // spots.json 新增、這裡還沒設定模型的據點：放一棟通用小店
   spots.filter((s) => !used.has(s.n)).forEach((s, i) => out.push({
     id: 'spot-' + i, name: s.n, cat: FALLBACK_CAT[s.c] || 'ren', model: 'shop', pos: pctToWorld(s.x, s.y),
     feature: s.f, text: '', addr: s.a, tel: s.t, hours: s.h, email: s.e, minor: true,

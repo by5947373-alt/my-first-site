@@ -171,7 +171,7 @@ const TYPES = {
   '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
 };
 // 原始碼與資料不對外提供。
-const BLOCKED = ['src/', 'data/', 'lib/', 'tools/', 'node_modules/', '.git/', 'island/'];
+const BLOCKED = ['src/', 'data/', 'lib/', 'tools/', 'node_modules/', '.git/'];
 const BLOCKED_FILES = ['server.js', 'build.js', 'package.json', 'package-lock.json', 'README.md'];
 
 function send(res, code, body, type = 'text/plain; charset=utf-8', extra = {}) {

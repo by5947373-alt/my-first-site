@@ -1,5 +1,5 @@
-// 進入點：找到頁面上的 #island-root，把 3D 島嶼掛上去。
-// 不支援 WebGL 的瀏覽器保留頁面原本的靜態內容（各分類頁也有完整資訊）。
+// 進入點：把 3D 島嶼掛到 index.html 的 #island-root。
+// 不支援 WebGL 的瀏覽器保留頁面上的提示文字。
 import { createRoot } from 'react-dom/client';
 import css from './styles.css?inline';
 import { App } from './App';
