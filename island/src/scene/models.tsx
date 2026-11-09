@@ -4,12 +4,12 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { Box, C, Cone, Cyl, Cyl6, Dome, G, House, Ico, Pyr, Roof, Sph, Windows, mat, windMat, type Vec3 } from './kit';
+import { ANIM, Box, C, Cone, Cyl, Cyl6, Dome, G, House, Ico, Pyr, Roof, Sph, Windows, mat, windMat, type Vec3 } from './kit';
 import type { Model } from '../data';
-import { useStore } from '../store';
+import { frozen } from '../store';
 
 export interface ModelProps { active: boolean; pulse: number }
-const still = () => useStore.getState().reduced;
+const still = frozen;
 
 /** 煙／蒸氣：幾顆半透明的低多邊形球，上升、變大、淡出，循環不停。 */
 function Puffs({ p, count = 5, size = 0.18, rise = 1.4, speed = 0.35, c = '#FFFFFF', boost }:
@@ -37,7 +37,7 @@ function Puffs({ p, count = 5, size = 0.18, rise = 1.4, speed = 0.35, c = '#FFFF
 /** 擺動（燈籠、招牌）。 */
 function Swing({ children, p, amp = 0.25, speed = 2, phase = 0 }: { children: React.ReactNode; p: Vec3; amp?: number; speed?: number; phase?: number }) {
   const ref = useRef<THREE.Group>(null!);
-  useFrame(({ clock }) => { if (!still()) ref.current.rotation.z = Math.sin(clock.elapsedTime * speed + phase) * amp; });
+  useFrame(() => { if (!still()) ref.current.rotation.z = Math.sin(ANIM.value * speed + phase) * amp; });
   return <group ref={ref} position={p}>{children}</group>;
 }
 
@@ -52,7 +52,7 @@ function Spin({ children, p, speed = 0.6, axis = 'y', fast }: { children: React.
 function Bob({ children, p, amp = 0.05, speed = 1.6, phase = 0 }: { children: React.ReactNode; p?: Vec3; amp?: number; speed?: number; phase?: number }) {
   const ref = useRef<THREE.Group>(null!);
   const y0 = p?.[1] ?? 0;
-  useFrame(({ clock }) => { if (!still()) ref.current.position.y = y0 + Math.sin(clock.elapsedTime * speed + phase) * amp; });
+  useFrame(() => { if (!still()) ref.current.position.y = y0 + Math.sin(ANIM.value * speed + phase) * amp; });
   return <group ref={ref} position={p}>{children}</group>;
 }
 
@@ -85,8 +85,8 @@ function Tropic({ active, pulse }: ModelProps) {
     gsap.to(beamMat, { opacity: 0, duration: 0.6 });
     gsap.to(ringMat, { opacity: 0, duration: 0.3 });
   }, [active, beamMat, ringMat]);
-  useFrame(({ clock }) => {
-    if (!still()) sun.current.rotation.y = clock.elapsedTime * 0.8;
+  useFrame(() => {
+    if (!still()) sun.current.rotation.y = ANIM.value * 0.8;
   });
   return (
     <group>
@@ -112,9 +112,9 @@ function Space({ active, pulse }: ModelProps) {
     if (!pulse) return;
     gsap.fromTo(stars.current.scale, { x: 0.3, y: 0.3, z: 0.3 }, { x: 1, y: 1, z: 1, duration: 0.9, ease: 'back.out(2)' });
   }, [pulse]);
-  useFrame(({ clock }) => {
+  useFrame(() => {
     if (still()) return;
-    stars.current.children.forEach((s, i) => s.scale.setScalar(0.06 + 0.03 * Math.sin(clock.elapsedTime * 3 + i * 1.3)));
+    stars.current.children.forEach((s, i) => s.scale.setScalar(0.06 + 0.03 * Math.sin(ANIM.value * 3 + i * 1.3)));
   });
   return (
     <group>
@@ -255,8 +255,8 @@ function Market({ active }: ModelProps) {
   const people = useRef<THREE.Group[]>([]);
   const awn = [C.coral, C.sky, C.butter, C.sage, C.mauve];
   const bulbList = useMemo(() => Array.from({ length: 14 }, (_, i) => i), []);
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
+  useFrame(() => {
+    const t = ANIM.value;
     bulbs.current.forEach((m, i) => {
       if (!m) return;
       const on = still() ? 1 : 0.55 + 0.45 * Math.sin(t * (active ? 6 : 2.4) + i * 0.9);
@@ -314,9 +314,9 @@ function Butterflies({ n = 7, active }: { n?: number; active: boolean }) {
   })), [n]);
   const refs = useRef<THREE.Group[]>([]);
   const wings = useRef<THREE.Group[]>([]);
-  useFrame(({ clock }) => {
+  useFrame(() => {
     if (still()) return;
-    const t = clock.elapsedTime;
+    const t = ANIM.value;
     list.forEach((b, i) => {
       const g = refs.current[i];
       if (!g) return;

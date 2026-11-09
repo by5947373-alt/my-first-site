@@ -4,8 +4,8 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { World } from '../world';
 import { BOUNDS } from '../geo';
-import { C, G, ROOFS, mat, windMat } from './kit';
-import { useStore } from '../store';
+import { C, G, NIGHT, ROOFS, mat, windMat } from './kit';
+import { frozen } from '../store';
 
 const dummy = new THREE.Object3D();
 const color = new THREE.Color();
@@ -78,6 +78,11 @@ const WALLS = [C.wall, C.wall2, C.wall3];
 export function Houses({ world }: { world: World }) {
   const body = useRef<THREE.InstancedMesh>(null!);
   const roof = useRef<THREE.InstancedMesh>(null!);
+  const win = useRef<THREE.InstancedMesh>(null!);
+  // 窗戶：白天是淡色玻璃，入夜後一盞盞亮起暖黃色
+  const winMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#CFE3EA' }), []);
+  const dayC = useMemo(() => new THREE.Color('#CFE3EA'), []), nightC = useMemo(() => new THREE.Color('#FFCF6E'), []);
+  useFrame(() => { winMat.color.copy(dayC).lerp(nightC, NIGHT.value); });
   useLayoutEffect(() => {
     world.houses.forEach((h, i) => {
       dummy.position.set(h.x, 0, h.z);
@@ -92,7 +97,15 @@ export function Houses({ world }: { world: World }) {
       dummy.updateMatrix();
       roof.current.setMatrixAt(i, dummy.matrix);
       roof.current.setColorAt(i, color.set(ROOFS[h.roof]));
+      // 正面一扇窗
+      dummy.position.set(h.x, h.h * 0.55, h.z);
+      dummy.scale.set(1, 1, 1);
+      dummy.translateZ(h.d / 2 + 0.006);
+      dummy.scale.set(h.w * 0.4, Math.min(0.12, h.h * 0.35), 0.01);
+      dummy.updateMatrix();
+      win.current.setMatrixAt(i, dummy.matrix);
     });
+    win.current.instanceMatrix.needsUpdate = true;
     for (const m of [body.current, roof.current]) {
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
@@ -102,6 +115,7 @@ export function Houses({ world }: { world: World }) {
     <>
       <instancedMesh ref={body} args={[G.box, mat('#ffffff'), world.houses.length]} castShadow receiveShadow />
       <instancedMesh ref={roof} args={[G.prism, mat('#ffffff'), world.houses.length]} castShadow />
+      <instancedMesh ref={win} args={[G.box, winMat, world.houses.length]} />
     </>
   );
 }
@@ -119,7 +133,7 @@ export function Clouds() {
   const refs = useRef<THREE.Group[]>([]);
   const span = BOUNDS.maxX - BOUNDS.minX + 14;
   useFrame((_, dt) => {
-    if (useStore.getState().reduced) return;
+    if (frozen()) return;
     clouds.forEach((c, i) => {
       const g = refs.current[i];
       if (!g) return;

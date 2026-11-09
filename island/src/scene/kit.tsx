@@ -33,6 +33,10 @@ export function mat(color: string, opts: { emissive?: string; transparent?: bool
 
 // ── 微風：讓樹冠、作物在頂點著色器裡搖擺（不耗 CPU） ──
 export const WIND = { value: 0 };
+/** 動畫時鐘：暫停時停住，所有待機動畫都看它（和微風共用同一個值） */
+export const ANIM = WIND;
+/** 夜晚程度 0（白天）→ 1（深夜），由時間光線控制 */
+export const NIGHT = { value: 0 };
 export function windMat(color: string, amp = 0.06, speed = 1.4) {
   const key = 'wind' + color + amp + speed;
   let m = cache.get(key) as THREE.MeshLambertMaterial | undefined;

@@ -134,3 +134,46 @@ export const ROADS_PX: { name: string; main?: boolean; pts: V2[] }[] = [
   { name: '中庄路', pts: [[600, 340], [640, 300], [705, 285], [760, 270], [818, 290]] },
   { name: '回歸路', pts: [[430, 214], [470, 200], [520, 196], [548, 220]] },
 ];
+
+// ── 在地連結：景點之間串起來的人、物、故事（「搬運」的小人和「連結線」都看這份） ──
+// 這些是示意的在地故事，說明產地、店家與景點之間的關係；內容可依實際情況修改。
+export interface Link { from: string; to: string; what: string; story: string }
+export const LINKS: Link[] = [
+  { from: 'xianpu', to: 'studio', what: '紅骨仙草', story: '仙草田採收的紅骨仙草，到工作室變成仙草麵、仙草醬與仙草顏料。' },
+  { from: 'xianpu', to: 'coop', what: '仙草乾', story: '曬好的仙草乾送到農會，做成仙草蓮藕吸凍等伴手禮。' },
+  { from: 'studio', to: 'duck', what: '仙草甜麵醬', story: '烤鴨捲餅裡的那一抹仙草甜麵醬，來自在地的仙草。' },
+  { from: 'studio', to: 'bakery', what: '仙草粉', story: '仙草揉進麵團，烤成帶有草本香氣的仙草可頌。' },
+  { from: 'coop', to: 'rice', what: '在地白米', story: '水上的稻米，盛成一碗嘉義火雞肉飯。' },
+  { from: 'coop', to: 'qingmu', what: '蓮藕與米', story: '農會與蔬果店一起，把當季農產送到大家的餐桌。' },
+  { from: 'qingmu', to: 'market', what: '當季水果', story: '木瓜、鳳梨、文旦，夜市的果汁攤最懂季節。' },
+  { from: 'sugar', to: 'market', what: '糖廠冰品', story: '糖廠的冰品是好幾代水上人的共同記憶。' },
+  { from: 'coffee', to: 'cafe', what: '咖啡香', story: '從觀光工廠到市區咖啡館，水上有自己的咖啡日常。' },
+  { from: 'station', to: 'tropic', what: '旅人', story: '從水上車站出發，往北騎一段路，就到北回歸線。' },
+  { from: 'tropic', to: 'space', what: '23.5° 的故事', story: '標誌塔旁的太空教育館，把北回歸線的地理意義講成天文故事。' },
+  { from: 'airport', to: 'space', what: '旅人', story: '搭飛機抵達，第一站就去看太陽轉身的地方。' },
+  { from: 'nanjing-st', to: 'sugar', what: '旅人', story: '下了南靖車站，走幾步就是百年糖廠。' },
+  { from: 'temple', to: 'market', what: '廟埕人潮', story: '廟會散場，人潮順著街走進夜市。' },
+  { from: 'mansion', to: 'station', what: '伴手禮', story: '逛完觀光工廠，帶著伴手禮到車站搭車回家。' },
+  { from: 'river', to: 'butterfly', what: '綠色廊道', story: '八掌溪沿岸的綠帶，連起東側丘陵的蝴蝶棲地。' },
+];
+
+// ── 角色測驗：你是水上的哪一種旅人？ ──
+export const QUIZ: { q: string; a: { t: string; c: Cat }[] }[] = [
+  { q: '週末一早醒來，你最想先做什麼？', a: [
+    { t: '去市場吃一碗熱騰騰的早餐', c: 'ren' }, { t: '到廟口走走，看看老街', c: 'wen' }, { t: '騎車找一條沒走過的路', c: 'di' }] },
+  { q: '旅行時，你最常帶回家的是？', a: [
+    { t: '在地小農的農產與伴手禮', c: 'chan' }, { t: '一大堆風景照', c: 'jing' }, { t: '和店家老闆聊天的故事', c: 'ren' }] },
+  { q: '如果只能選一個地方待一下午？', a: [
+    { t: '觀光工廠，看東西怎麼被做出來', c: 'chan' }, { t: '河堤邊吹風、看夕陽', c: 'jing' }, { t: '有故事的老建築', c: 'wen' }] },
+  { q: '「北緯 23.5 度」讓你想到？', a: [
+    { t: '太陽直射、影子消失的那一刻', c: 'di' }, { t: '夏天的田野和天空', c: 'jing' }, { t: '一個地方的身分與記憶', c: 'wen' }] },
+  { q: '你理想中的小旅行節奏是？', a: [
+    { t: '吃吃喝喝，一站接一站', c: 'ren' }, { t: '慢慢走，哪裡好看就停下來', c: 'jing' }, { t: '有主題地把一件事弄懂', c: 'chan' }] },
+];
+export const PERSONAS: Record<Cat, { name: string; text: string; picks: string[] }> = {
+  ren: { name: '巷口美食家', text: '你相信一個地方的味道，藏在店家老闆的手藝裡。這趟就從市區的在地小吃開始，吃到夜市。', picks: ['station', 'rice', 'duck', 'bakery', 'market'] },
+  wen: { name: '老街記憶收集者', text: '你喜歡聽建築和廟宇說故事。帶上好奇心，從庄頭廟宇走到將軍府和百年糖廠。', picks: ['temple', 'mansion', 'nanjing-st', 'sugar'] },
+  di: { name: '23.5° 地理探險家', text: '你對座標、地形和交通特別有感。從車站出發，追著北回歸線，一路走到天空。', picks: ['station', 'tropic', 'space', 'airport'] },
+  chan: { name: '產地好奇寶寶', text: '你想知道東西是怎麼來的。從仙草田、農會到觀光工廠，把水上的產業串成一條線。', picks: ['xianpu', 'studio', 'coop', 'coffee', 'sugar'] },
+  jing: { name: '慢活風景控', text: '你的旅行沒有行程表，只有好光線。沿著八掌溪，往東邊丘陵找蝴蝶。', picks: ['river', 'butterfly', 'xianpu', 'tropic'] },
+};

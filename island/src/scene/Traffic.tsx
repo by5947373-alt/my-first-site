@@ -4,8 +4,8 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { World } from '../world';
 import { BOUNDS } from '../geo';
-import { Box, C, Sph, G, mat } from './kit';
-import { useStore } from '../store';
+import { ANIM, Box, C, Sph, G, mat } from './kit';
+import { frozen } from '../store';
 
 const tmp = new THREE.Vector3();
 const tan = new THREE.Vector3();
@@ -16,8 +16,7 @@ function useAlong(curve: THREE.Curve<THREE.Vector3>, speed: number, offset: numb
   const len = useMemo(() => curve.getLength(), [curve]);
   const state = useRef({ s: offset * len * 2 });
   useFrame((_, dt) => {
-    const st = useStore.getState();
-    if (st.reduced) return;
+    if (frozen()) return;
     state.current.s = (state.current.s + Math.min(dt, 0.1) * speed) % (len * 2);
     const s = state.current.s;
     const fwd = s < len;
@@ -66,9 +65,9 @@ function Bike({ curve, speed, offset, shirt }: { curve: THREE.Curve<THREE.Vector
   const ref = useAlong(curve, speed, offset, 0.14, 0.03);
   const wheels = useRef<THREE.Mesh[]>([]);
   const legs = useRef<THREE.Group>(null!);
-  useFrame(({ clock }) => {
-    if (useStore.getState().reduced) return;
-    const t = clock.elapsedTime * speed * 22;
+  useFrame(() => {
+    if (frozen()) return;
+    const t = ANIM.value * speed * 22;
     wheels.current.forEach((w) => w && (w.rotation.z = -t));
     if (legs.current) legs.current.rotation.z = Math.sin(t) * 0.5;
   });
@@ -96,7 +95,7 @@ function Train({ curve }: { curve: THREE.Curve<THREE.Vector3> }) {
   const clock = useRef(0);
   const N = 4, gap = 0.62;
   useFrame((_, dt) => {
-    if (useStore.getState().reduced) return;
+    if (frozen()) return;
     clock.current += Math.min(dt, 0.1);
     const period = 34;
     const ph = (clock.current % period) / period; // 0→1
@@ -134,15 +133,15 @@ function Plane() {
   const prop = useRef<THREE.Mesh>(null!);
   const cx = (BOUNDS.minX + BOUNDS.maxX) / 2, cz = (BOUNDS.minZ + BOUNDS.maxZ) / 2;
   const rx = (BOUNDS.maxX - BOUNDS.minX) / 2 + 1, rz = (BOUNDS.maxZ - BOUNDS.minZ) / 2 + 1.5;
-  useFrame(({ clock }) => {
-    if (useStore.getState().reduced) return;
-    const t = clock.elapsedTime * 0.06;
+  useFrame(() => {
+    if (frozen()) return;
+    const t = ANIM.value * 0.06;
     const x = cx + Math.cos(t) * rx, z = cz + Math.sin(t) * rz;
     const dx = -Math.sin(t) * rx, dz = Math.cos(t) * rz;
     ref.current.position.set(x, 4.2 + Math.sin(t * 3) * 0.3, z);
     ref.current.rotation.set(0, Math.atan2(-dz, dx), 0);
     ref.current.rotateX(-0.25);
-    prop.current.rotation.x = clock.elapsedTime * 30;
+    prop.current.rotation.x = ANIM.value * 30;
   });
   return (
     <group ref={ref} scale={0.9}>

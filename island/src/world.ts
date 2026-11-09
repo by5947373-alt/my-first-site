@@ -17,6 +17,8 @@ export interface World {
   trees: Tree[];
   houses: HouseSpot[];
   hills: Hill[];
+  /** 主要道路旁的路燈 */
+  lamps: { x: number; z: number }[];
   /** 地面高度（丘陵上會高一點） */
   groundY: (x: number, z: number) => number;
 }
@@ -147,7 +149,18 @@ export function buildWorld(pois: Poi[]): World {
     }
     return y;
   };
-  return { roads, rivers, rail, fields, trees, houses, hills, groundY };
+  const lamps: { x: number; z: number }[] = [];
+  for (const r of roads) {
+    if (!r.main) continue;
+    const n = Math.floor(r.curve.getLength() / 1.7);
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.25) / n, p = r.curve.getPointAt(t), tan = r.curve.getTangentAt(t);
+      const side = i % 2 ? 1 : -1;
+      const q: V2 = [p.x - tan.z * 0.26 * side, p.z + tan.x * 0.26 * side];
+      if (onLand(q, 0.2) && !poiNear(q, 0.7)) lamps.push({ x: q[0], z: q[1] });
+    }
+  }
+  return { roads, rivers, rail, fields, trees, houses, hills, lamps, groundY };
 }
 
 export const landShape = () => {

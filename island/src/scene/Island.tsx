@@ -7,7 +7,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { TROPIC_Z, landSpansAtZ, ribbon, curveOf, toWorld, type V2 } from '../geo';
 import { landShape, type World } from '../world';
 import { C, G, mat, windMat } from './kit';
-import { useStore } from '../store';
+import { useStore, frozen } from '../store';
 
 const dummy = new THREE.Object3D();
 const color = new THREE.Color();
@@ -142,7 +142,7 @@ function Rivers({ world }: { world: World }) {
     };
   }, [world]);
   const m = useMemo(() => new THREE.MeshLambertMaterial({ map: tex }), [tex]);
-  useFrame((_, dt) => { if (!useStore.getState().reduced) tex.offset.x -= dt * 0.18; });
+  useFrame((_, dt) => { if (!frozen()) tex.offset.x -= dt * 0.18; });
   return (
     <>
       <mesh geometry={bank} material={mat(C.bank)} receiveShadow />

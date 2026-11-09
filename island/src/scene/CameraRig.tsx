@@ -16,7 +16,9 @@ const LAND_DIR = dirAt(0.32);
 // 直式手機螢幕：鏡頭轉到東南側，讓東西狹長的島嶼直立擺放、塞滿畫面
 const PORTRAIT_DIR = dirAt(0.32 + 1.3);
 const DIST = 60;
-const LEFT_UI = 150;
+// 畫面左側若有固定的介面，可以預留寬度（目前沒有）
+const LEFT_UI = 0;
+const TOP_DIR = new THREE.Vector3(0, 1, 0.02).normalize();
 
 export function CameraRig({ interactive, zoomable }: { interactive: boolean; zoomable: boolean }) {
   const { camera, size } = useThree();
@@ -102,14 +104,12 @@ export function CameraRig({ interactive, zoomable }: { interactive: boolean; zoo
       if (mobile) {
         const off = cam.position.clone().sub(ctl.current.target).setY(0).normalize();
         tgt.addScaledVector(off, (size.height * 0.2) / z);
-      } else {
-        // 桌機的資訊卡在右邊，目標往右偏
-        const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0).setY(0).normalize();
-        tgt.addScaledVector(right, (Math.min(380, size.width * 0.3) / 2) / z);
       }
       fly(tgt, z, null, 1.3);
     }
-    if (s.homeTick !== prev.homeTick) fly(home(), fit, HOME_DIR, 1.2);
+    if (s.homeTick !== prev.homeTick) fly(home(), fit, s.aerial ? TOP_DIR : HOME_DIR, 1.2);
+    // 鳥瞰：鏡頭轉到正上方往下看；再按一次回到斜角
+    if (s.aerial !== prev.aerial) fly(ctl.current.target.clone(), cam.zoom, s.aerial ? TOP_DIR : HOME_DIR, 1.1);
   }), [fit, size.width, size.height]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 平移不能把島拖出畫面；縮放程度回報給標籤（拉近才顯示市區小店名稱）
@@ -138,7 +138,7 @@ export function CameraRig({ interactive, zoomable }: { interactive: boolean; zoo
       zoomSpeed={0.9}
       minZoom={fit * 0.75}
       maxZoom={fit * 7}
-      minPolarAngle={0.25}
+      minPolarAngle={0}
       maxPolarAngle={1.18}
       screenSpacePanning={false}
       onStart={() => tween.current?.kill()}

@@ -5,9 +5,9 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { CAT, type Poi } from '../data';
-import { useStore } from '../store';
+import { useStore, frozen } from '../store';
 import { MODELS } from './models';
-import { G } from './kit';
+import { ANIM, G } from './kit';
 import type { World } from '../world';
 
 const damp = THREE.MathUtils.damp;
@@ -29,6 +29,7 @@ function Landmark({ poi, index, y0 }: { poi: Poi; index: number; y0: number }) {
   const closeUp = useStore((s) => s.closeUp);
   const tripNo = useStore((s) => s.trip.indexOf(poi.id) + 1);
   const crowded = useStore((s) => s.hidden.includes(poi.id));
+  const labelsOn = useStore((s) => s.showLabels);
   // 有些建築的待機動畫比較明顯，有些幾乎不動——讓整座島的動態有層次，不會同時一起晃
   const idle = useMemo(() => ({ amp: [0.02, 0.0, 0.035, 0.012][index % 4], speed: 0.8 + (index % 5) * 0.17, phase: index * 1.7 }), [index]);
 
@@ -43,10 +44,10 @@ function Landmark({ poi, index, y0 }: { poi: Poi; index: number; y0: number }) {
     return () => { tl.kill(); };
   }, [pulse]);
 
-  useFrame(({ clock }, dt) => {
-    const st = useStore.getState();
-    const t = clock.elapsedTime;
-    const bob = st.reduced ? 0 : Math.sin(t * idle.speed + idle.phase) * idle.amp;
+  useFrame((_, dt) => {
+    const t = ANIM.value;
+    const still = frozen();
+    const bob = still ? 0 : Math.sin(t * idle.speed + idle.phase) * idle.amp;
     const ty = (selected ? 0.3 : hovered ? 0.16 : filtered ? -0.12 : 0) + bob;
     const ts = selected ? 1.1 : hovered ? 1.07 : filtered ? 0.82 : 1;
     const g = lift.current;
@@ -57,7 +58,7 @@ function Landmark({ poi, index, y0 }: { poi: Poi; index: number; y0: number }) {
     const tr = selected ? 0.85 : hovered ? 0.55 : lit ? 0.38 : 0;
     ringMat.opacity = damp(ringMat.opacity, tr, 8, dt);
     discMat.opacity = damp(discMat.opacity, selected ? 0.16 : lit ? 0.1 : 0, 8, dt);
-    const k = selected && !st.reduced ? 1 + Math.sin(t * 3) * 0.06 : 1;
+    const k = selected && !still ? 1 + Math.sin(t * 3) * 0.06 : 1;
     ring.current.scale.setScalar(spec.r * 2.3 * k);
   });
 
@@ -71,7 +72,7 @@ function Landmark({ poi, index, y0 }: { poi: Poi; index: number; y0: number }) {
     s.select(poi.id);
   };
 
-  const showLabel = selected || hovered || (!filtered && !crowded && (!poi.minor || closeUp || tripNo > 0));
+  const showLabel = selected || hovered || (labelsOn && !filtered && !crowded && (!poi.minor || closeUp || tripNo > 0));
   return (
     <group position={[poi.pos[0], y0, poi.pos[1]]}>
       <mesh ref={ring} geometry={G.ring} material={ringMat} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]} />
@@ -98,7 +99,7 @@ function Landmark({ poi, index, y0 }: { poi: Poi; index: number; y0: number }) {
             onPointerLeave={() => useStore.getState().hover(null)}
           >
             {tripNo > 0 && <b className="isl-label-no">{tripNo}</b>}
-            <i>{CAT[poi.cat].label}</i>{poi.name}
+            <em>{String(index + 1).padStart(2, '0')}</em>{poi.name}
           </button>
         </Html>
       )}
@@ -122,11 +123,12 @@ function Declutter({ pois }: { pois: Poi[] }) {
     const boxes: [number, number, number, number][] = [];
     const hidden: string[] = [];
     for (const p of order) {
+      if (!st.showLabels) break;
       if (st.filter !== 'all' && st.filter !== p.cat) continue;
       if (p.minor && !st.closeUp && !st.trip.includes(p.id)) continue;
       v.set(p.pos[0], MODELS[p.model].h + 0.4, p.pos[1]).project(camera);
       const x = (v.x * 0.5 + 0.5) * size.width, y = (-v.y * 0.5 + 0.5) * size.height;
-      const w = p.name.length * 12.5 + 36 + (st.trip.includes(p.id) ? 22 : 0);
+      const w = p.name.length * 12.5 + 40 + (st.trip.includes(p.id) ? 22 : 0);
       const b: [number, number, number, number] = [x - w / 2, y - 14, x + w / 2, y + 14];
       if (boxes.some((o) => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1])) hidden.push(p.id);
       else boxes.push(b);
