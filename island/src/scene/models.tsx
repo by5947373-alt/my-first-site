@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { ANIM, Box, C, Cone, Cyl, Cyl6, Dome, G, House, Ico, Pyr, Roof, Sph, Windows, mat, windMat, type Vec3 } from './kit';
+import { ANIM, Box, C, Cone, Cyl, Cyl6, Dome, G, House, Ico, Pyr, Roof, Sph, Windows, mat, texMat, windMat, type Vec3 } from './kit';
 import type { Model } from '../data';
 import { frozen } from '../store';
 import { Chibi } from './Folk';
@@ -204,15 +204,105 @@ function Mansion({ active }: ModelProps) {
       <Box p={[0.55, 0, 0.18]} s={[0.32, 0.3, 0.6]} c="#E9B8A0" />
       <Roof p={[0.55, 0.3, 0.18]} s={[0.4, 0.2, 0.66]} c={roof} />
       <Box p={[0, 0, -0.095]} s={[0.22, 0.3, 0.02]} c={C.red} shadow={false} />
-      <Box p={[0, 0.005, 0.2]} s={[0.75, 0.01, 0.55]} c={C.stone} shadow={false} />
-      {/* 立在廣場上的大牙膏 */}
-      <Bob p={[0.05, 0.25, 0.3]} amp={0.06} speed={active ? 4 : 1.4}>
-        <group rotation={[0, 0, 0.35]}>
-          <Box s={[0.42, 0.14, 0.22]} c={C.white} />
-          <Box p={[-0.03, 0.005, 0]} s={[0.25, 0.145, 0.225]} c={C.sky} shadow={false} />
-          <Cyl p={[0.24, 0.03, 0]} r={[0, 0, -Math.PI / 2]} s={[0.1, 0.06, 0.1]} c={C.red} />
+      <Box p={[0, 0.005, 0.35]} s={[1.0, 0.01, 0.85]} c={C.stone} shadow={false} />
+      {/* 廣場上的大牙膏與牙刷 */}
+      <Toothpaste active={active} />
+    </group>
+  );
+}
+
+
+// ─────────────────────────── 大牙膏 ───────────────────────────
+/** 牙膏管：靠蓋子那端是圓的，往尾端慢慢壓扁成一條封口（沿 +x，長 1、半徑 0.5）。 */
+const TUBE = (() => {
+  const g = new THREE.CylinderGeometry(0.5, 0.5, 1, 28, 16, true);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i), u = y + 0.5;                      // 0 = 肩部、1 = 封口
+    const k = THREE.MathUtils.smoothstep(u, 0.12, 1);
+    p.setX(i, p.getX(i) * (1 + k * 0.32));                 // 越往尾端越寬
+    p.setZ(i, p.getZ(i) * (1 - k * 0.94));                 // 也越扁
+  }
+  g.computeVertexNormals();
+  g.rotateZ(-Math.PI / 2);                                  // 長軸轉成 x
+  g.translate(0.5, 0, 0);
+  return g;
+})();
+
+/** 牙膏管的包裝：白底、藍色色帶加一道白色波浪、紅色細線。 */
+function tubeTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = 128; cv.height = 256;
+  const g = cv.getContext('2d')!;
+  g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, 128, 256);
+  // v 方向是管子長度（上 = 封口、下 = 肩部）
+  g.fillStyle = '#2F7FD0'; g.fillRect(0, 70, 128, 120);
+  g.strokeStyle = '#FFFFFF'; g.lineWidth = 12;
+  g.beginPath();
+  for (let x = 0; x <= 128; x += 4) g.lineTo(x, 130 + Math.sin(x / 128 * Math.PI * 4) * 14);
+  g.stroke();
+  g.fillStyle = '#E5574A'; g.fillRect(0, 196, 128, 8); g.fillRect(0, 58, 128, 5);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** 擠出來的一坨牙膏：白、藍相間的螺旋。 */
+function PasteSwirl({ grow }: { grow: React.MutableRefObject<number> }) {
+  const ref = useRef<THREE.Group>(null!);
+  const beads = useMemo(() => Array.from({ length: 22 }, (_, i) => {
+    const t = i / 21, a = t * Math.PI * 5;
+    const r = 0.11 * (1 - t * 0.75);
+    return { p: [Math.cos(a) * r, 0.03 + t * 0.16, Math.sin(a) * r * 0.8] as Vec3, s: 0.075 * (1 - t * 0.45), c: i % 3 === 1 ? '#7FC8E8' : '#FFFFFF' };
+  }), []);
+  useFrame((_, dt) => {
+    const k = THREE.MathUtils.damp(ref.current.scale.x, grow.current, 6, dt);
+    ref.current.scale.setScalar(k);
+  });
+  return (
+    <group ref={ref}>
+      {beads.map((b, i) => <Sph key={i} p={b.p} s={b.s} c={b.c} />)}
+      <Cone p={[0, 0.19, 0]} s={[0.05, 0.07, 0.05]} c="#FFFFFF" />
+    </group>
+  );
+}
+
+function Toothpaste({ active }: { active: boolean }) {
+  const tubeMat = useMemo(() => texMat(tubeTexture()), []);
+  const squeeze = useRef<THREE.Group>(null!);
+  const grow = useRef(1);
+  useFrame(() => {
+    const t = ANIM.value;
+    // 點一下：牙膏管被用力擠一下，牙刷上的牙膏變多
+    const k = still() ? 0 : active ? (Math.sin(t * 5) * 0.5 + 0.5) * 0.12 : Math.sin(t * 1.3) * 0.015;
+    squeeze.current.scale.set(1, 1 - k, 1 - k * 1.4);
+    grow.current = active ? 1.3 : 1;
+  });
+  return (
+    <group position={[0.05, 0, 0.55]} scale={1.7}>
+      {/* 牙刷：長柄＋刷頭＋刷毛 */}
+      <group position={[-0.32, 0.05, 0.02]} rotation={[0, 0.15, 0]}>
+        <Box p={[-0.18, 0, 0]} s={[0.62, 0.06, 0.09]} c={C.coral} />
+        <Box p={[-0.36, 0.01, 0]} s={[0.12, 0.062, 0.05]} c={C.white} shadow={false} />
+        <Box p={[0.2, 0.01, 0]} s={[0.22, 0.05, 0.1]} c={C.coral} />
+        {[0, 1, 2, 3, 4].map((i) => [-1, 1].map((j) => (
+          <Cyl key={i + '' + j} p={[0.12 + i * 0.04, 0.06, j * 0.022]} s={[0.026, 0.07, 0.026]} c={(i + (j > 0 ? 1 : 0)) % 2 ? '#7FC8E8' : C.white} shadow={false} />
+        )))}
+        <group position={[0.2, 0.12, 0]}><PasteSwirl grow={grow} /></group>
+      </group>
+      {/* 牙膏管：蓋子對著牙刷，尾端翹起來 */}
+      <group position={[0.17, 0.11, -0.02]} rotation={[0, -0.25, 0.22]}>
+        <group ref={squeeze}>
+          <mesh geometry={TUBE} material={tubeMat} position={[0.06, 0, 0]} scale={[0.5, 0.2, 0.2]} castShadow />
+          {/* 尾端壓過的封口條 */}
+          <Box p={[0.57, -0.006, 0]} s={[0.05, 0.012, 0.26]} c="#E9E9EE" />
+          {[-0.08, -0.03, 0.03, 0.08].map((z) => <Box key={z} p={[0.57, 0.003, z]} s={[0.05, 0.004, 0.012]} c="#CFCFD6" shadow={false} />)}
         </group>
-      </Bob>
+        {/* 肩部與有紋路的紅蓋子 */}
+        <mesh geometry={G.cone} material={mat(C.white)} position={[0.065, 0, 0]} rotation={[0, 0, Math.PI / 2]} scale={[0.2, 0.06, 0.2]} />
+        <Cyl p={[0.005, 0, 0]} r={[0, 0, Math.PI / 2]} s={[0.1, 0.07, 0.1]} c={C.red} />
+        {[0.02, 0.04].map((x) => <mesh key={x} geometry={G.torus} material={mat('#C9443A')} position={[-x, 0, 0]} rotation={[0, Math.PI / 2, 0]} scale={[0.1, 0.1, 0.06]} />)}
+      </group>
     </group>
   );
 }
@@ -831,7 +921,7 @@ export const MODELS: Record<Model, { h: number; r: number; C: (p: ModelProps & {
   space: { h: 2.3, r: 0.8, C: Space },
   sugar: { h: 2.3, r: 0.95, C: Sugar },
   coffee: { h: 1.45, r: 0.75, C: Coffee },
-  mansion: { h: 1.0, r: 0.8, C: Mansion },
+  mansion: { h: 1.0, r: 0.95, C: Mansion },
   temple: { h: 1.3, r: 0.7, C: Temple },
   zen: { h: 1.3, r: 0.85, C: Temple },
   bamboo: { h: 1.3, r: 0.95, C: Temple },
