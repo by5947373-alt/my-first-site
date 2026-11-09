@@ -132,6 +132,8 @@ const rail = chain(railSegs)
 const round = (pts) => pts.map(([x, y]) => [+x.toFixed(1), +y.toFixed(1)]);
 const out = {
   frame: [W, H],
+  // 經緯度 → 畫框座標的投影參數（景點用真實經緯度擺放）
+  proj: { KX: +KX.toFixed(6), KY, S: +S.toFixed(6), OX: +OX.toFixed(4), OY: +OY.toFixed(4) },
   tropicY: +P(120.42, 23.4534)[1].toFixed(1),
   land: round(land),
   rivers: rivers.map((r) => ({ ...r, pts: round(r.pts) })),

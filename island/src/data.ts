@@ -19,7 +19,8 @@ export const CAT = Object.fromEntries(CATS.map((c) => [c.id, c])) as Record<Cat,
 export type Model =
   | 'tropic' | 'space' | 'sugar' | 'coffee' | 'mansion' | 'temple' | 'market' | 'butterfly'
   | 'herbfarm' | 'fruit' | 'coop' | 'studio' | 'duck' | 'cafe' | 'bakery' | 'rice' | 'shop'
-  | 'station' | 'airport' | 'bridge';
+  | 'station' | 'airport' | 'bridge'
+  | 'zen' | 'bamboo' | 'hall' | 'tunnel' | 'pond' | 'farm' | 'papaya' | 'tomato' | 'lotus' | 'pharmacy' | 'heritage';
 
 export interface Poi {
   id: string;
@@ -49,12 +50,6 @@ const DEFS: Def[] = [
     text: '北回歸線穿過水上鄉。每年夏至正午，太陽直射這條線，影子幾乎消失——「23.5° 剛剛好的城市」的名字就從這裡來。點一下標誌塔，看看陽光落下的那一刻。' },
   { id: 'space', match: '北回歸線太空教育館', name: '北回歸線太空教育館', cat: 'jing', model: 'space',
     text: '緊鄰北回歸線標誌的天文科學館，從 23.5° 的地理意義出發，帶大人小孩認識太陽、星球與太空探索。' },
-  { id: 'airport', name: '嘉義水上機場', cat: 'di', model: 'airport', px: [337, 130], rot: -0.65, feature: '嘉義的空中門戶',
-    text: '嘉義地區唯一的民用機場就在水上鄉北邊，飛往離島的班機從這裡起降。抬頭看看，小飛機正繞著島嶼飛行。' },
-  { id: 'station', name: '水上車站', cat: 'di', model: 'station', px: [372, 269], rot: -0.87, feature: '縱貫線上的小站',
-    text: '台鐵縱貫線上的水上車站，是市區生活圈的起點。火車沿著真實的鐵道路線在島上來回奔馳。' },
-  { id: 'nanjing-st', name: '南靖車站', cat: 'di', model: 'station', px: [305, 386], rot: -1.4, feature: '糖廠旁的老車站',
-    text: '鄰近南靖糖廠的小車站，過去是運糖、通勤的重要節點。' },
   { id: 'sugar', match: '南靖糖廠', name: '南靖糖廠', cat: 'chan', model: 'sugar', rot: 0.2,
     text: '百年糖廠仍在運轉，製糖期煙囪冒出白煙，空氣裡有淡淡甜味。冰品部和五分車鐵道是在地人的共同記憶。' },
   { id: 'mansion', match: '白人牙膏觀光工廠', name: '白人牙膏觀光工廠', cat: 'wen', model: 'mansion', rot: 0.1,
@@ -177,3 +172,10 @@ export const PERSONAS: Record<Cat, { name: string; text: string; picks: string[]
   chan: { name: '產地好奇寶寶', text: '你想知道東西是怎麼來的。從仙草田、農會到觀光工廠，把水上的產業串成一條線。', picks: ['xianpu', 'studio', 'coop', 'coffee', 'sugar'] },
   jing: { name: '慢活風景控', text: '你的旅行沒有行程表，只有好光線。沿著八掌溪，往東邊丘陵找蝴蝶。', picks: ['river', 'butterfly', 'xianpu', 'tropic'] },
 };
+
+// ── 地圖上的其他建築（不在景點清單裡，只是擺著）：經緯度來自 OpenStreetMap ──
+export const DECOR: { id: string; model: Model; ll: [number, number]; rot?: number }[] = [
+  { id: 'airport', model: 'airport', ll: [23.45922, 120.39252], rot: -0.65 },
+  { id: 'station', model: 'station', ll: [23.43397, 120.39944], rot: -0.87 },
+  { id: 'nanjing-st', model: 'station', ll: [23.41321, 120.38641], rot: -1.4 },
+];

@@ -4,7 +4,8 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { CAT, type Poi } from '../data';
+import { CAT, DECOR, type Poi } from '../data';
+import { latLonToWorld } from '../geo';
 import { useStore, frozen } from '../store';
 import { MODELS } from './models';
 import { ANIM, G } from './kit';
@@ -163,9 +164,27 @@ const rank = (p: Poi, st: ReturnType<typeof useStore.getState>) =>
   (st.selected === p.id ? 100 : 0) + (st.hovered === p.id ? 50 : 0) + (st.trip.includes(p.id) ? 20 : 0) + (p.minor ? 0 : 10) +
   ({ tropic: 9, space: 6, sugar: 8, airport: 7, market: 7, coffee: 6, temple: 6 } as Record<string, number>)[p.model] || 0;
 
+/** 不在景點清單裡、但地圖上該有的建築（機場、車站）：只擺著，不能點、沒有名牌。 */
+function Decor() {
+  return (
+    <>
+      {DECOR.map((d) => {
+        const [x, z] = latLonToWorld(d.ll[0], d.ll[1]);
+        const M = MODELS[d.model].C;
+        return (
+          <group key={d.id} position={[x, 0, z]} rotation={[0, d.rot || 0, 0]}>
+            <M active={false} pulse={0} kind={d.model} />
+          </group>
+        );
+      })}
+    </>
+  );
+}
+
 export function Landmarks({ pois, world }: { pois: Poi[]; world: World }) {
   return (
     <>
+      <Decor />
       {pois.map((p, i) => <Landmark key={p.id} poi={p} index={i} y0={world.groundY(p.pos[0], p.pos[1])} />)}
       <Declutter pois={pois} />
     </>

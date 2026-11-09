@@ -218,12 +218,30 @@ function Mansion({ active }: ModelProps) {
 }
 
 // ─────────────────────────── 廟宇 ───────────────────────────
-function Temple({ active }: ModelProps) {
-  const roofC = '#E2A04A';
+function Temple({ active, kind }: ModelProps & { kind?: Model }) {
+  // 三座寺廟各有自己的配色：上天宮紅牆金瓦、苦竹寺紅牆綠瓦＋竹林、妙蓮禪寺米牆褐瓦＋佛塔
+  const zen = kind === 'zen', bamboo = kind === 'bamboo';
+  const roofC = zen ? '#9C7B5B' : bamboo ? '#5FA06E' : '#E2A04A';
+  const wallC = zen ? '#F3E3C3' : C.red;
   return (
     <group>
+      {bamboo && [[-0.85, -0.3], [-0.9, 0.2], [0.85, -0.35], [0.95, 0.15], [-0.6, -0.6], [0.6, -0.65]].map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          {[0, 1, 2].map((k) => <mesh key={k} geometry={G.cyl} material={windMat('#7DB65A', 0.05, 1.6)} position={[k * 0.07 - 0.07, 0, (k % 2) * 0.06]} scale={[0.035, 0.75 + k * 0.12, 0.035]} castShadow />)}
+          <mesh geometry={G.sph} material={windMat('#8CCB66', 0.06)} position={[0, 0.85, 0]} scale={[0.32, 0.3, 0.3]} castShadow />
+        </group>
+      ))}
+      {zen && (
+        <group position={[0.85, 0, -0.4]}>
+          {[0, 1, 2, 3].map((i) => <group key={i}>
+            <Cyl6 p={[0, i * 0.22, 0]} s={[0.3 - i * 0.05, 0.16, 0.3 - i * 0.05]} c="#F3E3C3" />
+            <Cone p={[0, i * 0.22 + 0.15, 0]} s={[0.4 - i * 0.06, 0.08, 0.4 - i * 0.06]} c={roofC} />
+          </group>)}
+          <Sph p={[0, 0.98, 0]} s={0.08} c={C.gold} />
+        </group>
+      )}
       <Box s={[1.3, 0.12, 1.0]} c={C.stone} />
-      <Box p={[0, 0.12, -0.05]} s={[1.0, 0.42, 0.65]} c={C.red} />
+      <Box p={[0, 0.12, -0.05]} s={[1.0, 0.42, 0.65]} c={wallC} />
       {/* 雙層燕尾屋頂（兩端起翹） */}
       <Roof p={[0, 0.54, -0.05]} s={[0.85, 0.24, 1.25]} c={roofC} r={[0, Math.PI / 2, 0]} />
       <Roof p={[0, 0.76, -0.05]} s={[0.6, 0.22, 0.85]} c={roofC} r={[0, Math.PI / 2, 0]} />
@@ -234,7 +252,7 @@ function Temple({ active }: ModelProps) {
         </group>
       ))}
       <Sph p={[0, 1.0, -0.05]} s={0.12} c={C.gold} />
-      {[-0.35, 0.35].map((x) => <Cyl key={x} p={[x, 0.12, 0.3]} s={[0.07, 0.42, 0.07]} c="#B83A32" />)}
+      {[-0.35, 0.35].map((x) => <Cyl key={x} p={[x, 0.12, 0.3]} s={[0.07, 0.42, 0.07]} c={zen ? '#B98B5E' : '#B83A32'} />)}
       <Box p={[0, 0.12, 0.275]} s={[0.3, 0.3, 0.02]} c="#7A2E28" shadow={false} />
       {/* 燈籠 */}
       {[-0.22, 0.22].map((x, i) => (
@@ -555,6 +573,258 @@ function Bridge({ active }: ModelProps) {
   );
 }
 
+
+// ─────────────────────────── 水上市場 ───────────────────────────
+function Hall({ active }: ModelProps) {
+  const gaits = useRef([0, 1, 2].map(() => ({ phase: 0, moving: true })));
+  const people = useRef<THREE.Group[]>([]);
+  useFrame(() => {
+    if (still()) return;
+    const t = ANIM.value;
+    people.current.forEach((g, i) => {
+      if (!g) return;
+      g.position.x = Math.sin(t * 0.35 + i * 2) * 0.55;
+      g.rotation.y = Math.cos(t * 0.35 + i * 2) > 0 ? 0 : Math.PI;
+      gaits.current[i].phase = t * 8 + i;
+    });
+  });
+  const goods = [C.coral, '#F29E4C', '#B8D46A', C.butter, '#E5574A', C.sage];
+  return (
+    <group>
+      <Box s={[1.7, 0.04, 1.1]} c="#E8DCC4" shadow={false} />
+      {/* 拱形鐵皮屋頂的老市場 */}
+      {[-0.75, 0.75].map((x) => [-0.45, 0.45].map((z) => <Cyl key={x + '' + z} p={[x, 0, z]} s={[0.06, 0.6, 0.06]} c="#6B8FA8" shadow={false} />))}
+      <mesh position={[0, 0.6, 0]} rotation={[0, 0, Math.PI / 2]} material={mat('#7FB2C9')} castShadow>
+        <cylinderGeometry args={[0.55, 0.55, 1.7, 20, 1, false, 0, Math.PI]} />
+      </mesh>
+      {[-0.5, 0, 0.5].map((x, i) => (
+        <group key={x} position={[x, 0, -0.18]}>
+          <Box s={[0.38, 0.2, 0.28]} c={C.wood} />
+          {[0, 1, 2].map((k) => <Sph key={k} p={[-0.1 + k * 0.1, 0.24, 0]} s={0.09} c={goods[(i * 2 + k) % goods.length]} />)}
+        </group>
+      ))}
+      <Bob p={[0, 0.95, 0.56]} amp={active ? 0.06 : 0.02} speed={2}>
+        <Box s={[0.6, 0.18, 0.04]} c={C.coral} />
+        <Box p={[0, 0.04, 0.025]} s={[0.46, 0.08, 0.01]} c={C.white} shadow={false} />
+      </Bob>
+      {[C.sky, C.butter, C.mauve].map((c, i) => (
+        <group key={i} ref={(g) => { if (g) people.current[i] = g; }} position={[0, 0, 0.2 + i * 0.08]}>
+          <group scale={0.7}><Chibi shirt={c} seed={i + 7} gait={{ current: gaits.current[i] }} /></group>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ─────────────────────────── 綠色隧道 ───────────────────────────
+function Tunnel({ active }: ModelProps) {
+  const bike = useRef<THREE.Group>(null!);
+  useFrame(() => {
+    if (still()) return;
+    const t = (ANIM.value * (active ? 0.5 : 0.22)) % 1;
+    bike.current.position.x = -1.1 + t * 2.2;
+  });
+  return (
+    <group>
+      <Box p={[0, 0, 0]} s={[2.4, 0.03, 0.4]} c={C.road} shadow={false} />
+      {/* 兩排大樹往中間長，樹冠在路上方接起來 */}
+      {[-1, -0.5, 0, 0.5, 1].map((x, i) => [-1, 1].map((sd) => (
+        <group key={x + '' + sd} position={[x, 0, sd * 0.36]}>
+          <Cyl s={[0.08, 0.7, 0.08]} c={C.trunk} r={[sd * 0.25, 0, 0]} />
+          <mesh geometry={G.sph} material={windMat(i % 2 ? C.leaf : C.leaf2, 0.04)} position={[0, 0.8, -sd * 0.16]} scale={[0.6, 0.42, 0.55]} castShadow />
+        </group>
+      )))}
+      <group ref={bike} position={[-1.1, 0.04, 0.05]} scale={0.6}>
+        <mesh geometry={G.torus} material={mat(C.dark)} position={[0.1, 0.07, 0]} scale={[0.14, 0.14, 0.4]} />
+        <mesh geometry={G.torus} material={mat(C.dark)} position={[-0.1, 0.07, 0]} scale={[0.14, 0.14, 0.4]} />
+        <group position={[-0.02, 0.07, 0]} scale={0.85}><Chibi shirt={C.butter} seed={5} sitting /></group>
+      </group>
+    </group>
+  );
+}
+
+// ─────────────────────────── 九芎埤 ───────────────────────────
+function Pond({ active }: ModelProps) {
+  return (
+    <group>
+      <mesh geometry={G.cyl} material={mat(C.water)} position={[0, -0.02, 0]} scale={[1.7, 0.05, 1.3]} />
+      <mesh geometry={G.cyl} material={mat('#E9DDB8')} position={[0, -0.03, 0]} scale={[1.85, 0.04, 1.45]} />
+      {/* 湖心亭與小木橋 */}
+      <group position={[0.2, 0, -0.1]}>
+        {[[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]].map(([x, z], i) => <Cyl key={i} p={[x, 0, z]} s={[0.04, 0.42, 0.04]} c={C.red} shadow={false} />)}
+        <Pyr p={[0, 0.42, 0]} s={[0.62, 0.28, 0.62]} c="#5FA06E" />
+        <Box p={[0, 0.02, 0]} s={[0.5, 0.05, 0.5]} c={C.wood} />
+      </group>
+      <Box p={[0.2, 0.03, 0.42]} s={[0.12, 0.04, 0.5]} c={C.wood} />
+      {/* 九芎樹（光滑的樹幹、淡紫色花） */}
+      {[[-0.75, -0.35], [-0.6, 0.45], [0.85, 0.4]].map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <Cyl s={[0.07, 0.45, 0.07]} c="#D9B99A" />
+          <mesh geometry={G.sph} material={windMat('#C9A8E0', 0.05)} position={[0, 0.55, 0]} scale={[0.42, 0.34, 0.42]} castShadow />
+        </group>
+      ))}
+      <Bob p={[-0.3, 0.02, -0.2]} amp={0.02} speed={active ? 3 : 1.2}>
+        <Box s={[0.26, 0.05, 0.12]} c={C.coral} />
+      </Bob>
+    </group>
+  );
+}
+
+// ─────────────────────────── 大智慧農場 ───────────────────────────
+function Farm({ active }: ModelProps) {
+  return (
+    <group>
+      <group position={[-0.4, 0, -0.2]}>
+        <Box s={[0.6, 0.38, 0.5]} c="#D9775C" />
+        <Roof p={[0, 0.38, 0]} s={[0.66, 0.3, 0.56]} c="#F6EBD3" />
+        <Box p={[0, 0, 0.255]} s={[0.22, 0.26, 0.02]} c={C.white} shadow={false} />
+      </group>
+      <group position={[0.15, 0, -0.35]}>
+        <Cyl s={[0.24, 0.6, 0.24]} c={C.stone} />
+        <Dome p={[0, 0.6, 0]} s={[0.25, 0.18, 0.25]} c={C.sky} />
+      </group>
+      {[0, 1, 2, 3].map((r) => [0, 1, 2, 3, 4].map((c) => (
+        <mesh key={r + '-' + c} geometry={G.cone} material={windMat(r % 2 ? '#8DBE6C' : '#B8D46A', 0.05, 2)} position={[-0.5 + c * 0.25, 0.02, 0.2 + r * 0.17]} scale={[0.13, 0.17, 0.13]} castShadow />
+      )))}
+      {/* 稻草人 */}
+      <Swing p={[0.65, 0, 0.1]} amp={active ? 0.25 : 0.08} speed={2}>
+        <Cyl s={[0.03, 0.45, 0.03]} c={C.woodDark} />
+        <Box p={[0, 0.32, 0]} s={[0.36, 0.03, 0.03]} c={C.woodDark} />
+        <Box p={[0, 0.26, 0]} s={[0.14, 0.16, 0.08]} c={C.coral} />
+        <Sph p={[0, 0.43, 0]} s={0.1} c="#EED79A" />
+        <Cone p={[0, 0.47, 0]} s={[0.2, 0.08, 0.2]} c="#E8C987" />
+      </Swing>
+    </group>
+  );
+}
+
+// ─────────────────────────── 作物：木瓜、蕃茄、蓮子 ───────────────────────────
+function Papaya({ active }: ModelProps) {
+  return (
+    <group>
+      <Box s={[1.4, 0.04, 1.1]} c="#8A6B4E" shadow={false} />
+      {[[-0.45, -0.3], [0.1, -0.35], [0.5, 0.1], [-0.3, 0.3], [0.15, 0.4]].map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <Cyl s={[0.06, 0.7, 0.06]} c="#B9A27E" />
+          {[0, 1.25, 2.5, 3.75, 5].map((a) => (
+            <mesh key={a} geometry={G.sph} material={windMat('#6FC05A', 0.04)} position={[Math.cos(a) * 0.16, 0.74, Math.sin(a) * 0.16]} scale={[0.32, 0.06, 0.16]} rotation={[0, -a, -0.3]} />
+          ))}
+          {/* 樹幹上一圈木瓜 */}
+          <Bob p={[0, 0.56, 0]} amp={active ? 0.04 : 0.008} speed={3} phase={i}>
+            {[0, 2.1, 4.2].map((a) => <Sph key={a} p={[Math.cos(a) * 0.07, 0, Math.sin(a) * 0.07]} s={[0.08, 0.12, 0.08]} c={i % 2 ? '#F29E4C' : '#9CC56B'} />)}
+          </Bob>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function Tomato({ active }: ModelProps) {
+  return (
+    <group>
+      <Box s={[1.5, 0.04, 1.1]} c="#8A6B4E" shadow={false} />
+      {/* 半圓形溫室 */}
+      <mesh position={[0, 0, -0.15]} rotation={[0, 0, Math.PI / 2]} material={mat('#E6F4F1', { transparent: true, opacity: 0.55 })}>
+        <cylinderGeometry args={[0.42, 0.42, 1.2, 16, 1, true, 0, Math.PI]} />
+      </mesh>
+      {[-0.4, 0, 0.4].map((x) => [-0.3, -0.05].map((z) => (
+        <group key={x + '' + z} position={[x, 0, z]}>
+          <mesh geometry={G.cone} material={windMat('#5FA052', 0.04, 2.2)} scale={[0.16, 0.3, 0.16]} castShadow />
+          <Bob p={[0, 0.16, 0]} amp={active ? 0.03 : 0.006} speed={3}>
+            {[0, 2, 4].map((a) => <Sph key={a} p={[Math.cos(a) * 0.07, (a % 3) * 0.03, Math.sin(a) * 0.07]} s={0.06} c="#E5473B" />)}
+          </Bob>
+        </group>
+      )))}
+      {/* 外面一籃剛採的蕃茄 */}
+      <group position={[0.5, 0, 0.38]}>
+        <Cyl s={[0.24, 0.1, 0.18]} c={C.wood} />
+        {[0, 1, 2, 3].map((k) => <Sph key={k} p={[-0.06 + (k % 2) * 0.1, 0.12, -0.03 + Math.floor(k / 2) * 0.06]} s={0.07} c="#E5473B" />)}
+      </group>
+    </group>
+  );
+}
+
+function Lotus({ active }: ModelProps) {
+  const pads = useMemo(() => Array.from({ length: 16 }, (_, i) => {
+    const a = i * 2.39, r = 0.15 + (i % 5) * 0.14;
+    return { x: Math.cos(a) * r * 1.2, z: Math.sin(a) * r, flower: i % 3 === 0 };
+  }), []);
+  return (
+    <group>
+      <mesh geometry={G.cyl} material={mat('#6FC9C2')} position={[0, -0.02, 0]} scale={[1.6, 0.05, 1.2]} />
+      <mesh geometry={G.cyl} material={mat('#C9DFA0')} position={[0, -0.03, 0]} scale={[1.75, 0.04, 1.35]} />
+      {pads.map((p, i) => (
+        <group key={i} position={[p.x, 0.04, p.z]}>
+          <mesh geometry={G.cyl} material={mat('#5FB052')} scale={[0.2, 0.01, 0.2]} />
+          {p.flower && (
+            <Bob p={[0, 0.06, 0]} amp={active ? 0.04 : 0.01} speed={2} phase={i}>
+              <Sph s={[0.1, 0.08, 0.1]} c="#F7A8C2" />
+              <Sph p={[0, 0.03, 0]} s={0.05} c="#F5D36B" />
+            </Bob>
+          )}
+        </group>
+      ))}
+      {/* 蓮蓬 */}
+      {[[-0.5, -0.2], [0.45, 0.25]].map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <Cyl s={[0.015, 0.3, 0.015]} c="#5FA052" />
+          <Cone p={[0, 0.3, 0]} r={[Math.PI, 0, 0]} s={[0.12, 0.08, 0.12]} c="#9CC56B" />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ─────────────────────────── 金成藥鋪 ───────────────────────────
+function Pharmacy({ active }: ModelProps) {
+  return (
+    <group>
+      <Box s={[0.7, 0.5, 0.5]} c="#E9D7B8" />
+      <Roof p={[0, 0.5, 0]} s={[0.76, 0.24, 0.56]} c="#7A6555" />
+      <Box p={[0, 0.06, 0.255]} s={[0.4, 0.3, 0.02]} c={C.woodDark} shadow={false} />
+      {/* 直式老招牌 */}
+      <Box p={[0.3, 0.12, 0.3]} s={[0.1, 0.32, 0.03]} c="#8E2F28" />
+      {[0, 1, 2, 3].map((k) => <Box key={k} p={[0.3, 0.16 + k * 0.07, 0.318]} s={[0.05, 0.04, 0.005]} c={C.gold} shadow={false} />)}
+      {/* 門口的藥材甕和秤 */}
+      {[-0.22, -0.05].map((x, i) => <Cyl key={x} p={[x, 0, 0.42]} s={[0.12, 0.14, 0.12]} c={i ? '#A8C3B0' : '#C9A37A'} />)}
+      <Swing p={[0.12, 0.42, 0.34]} amp={active ? 0.3 : 0.06} speed={2}>
+        <Box p={[0, -0.03, 0]} s={[0.005, 0.06, 0.005]} c={C.dark} shadow={false} />
+        <Cyl p={[0, -0.08, 0]} s={[0.1, 0.012, 0.1]} c={C.gold} />
+      </Swing>
+      <Puffs p={[-0.22, 0.16, 0.42]} count={3} size={0.06} rise={0.4} speed={0.3} c="#F2EADF" boost={active} />
+    </group>
+  );
+}
+
+// ─────────────────────────── 林家古蹟 ───────────────────────────
+function Heritage({ active }: ModelProps) {
+  const brick = '#C9745A', tile = '#A9523F';
+  return (
+    <group>
+      <Box p={[0, 0, 0.1]} s={[1.5, 0.02, 1.1]} c="#DCC9A8" shadow={false} />
+      {/* 紅磚三合院：正身＋左右護龍，中間是曬穀的埕 */}
+      <Box p={[0, 0, -0.35]} s={[1.3, 0.4, 0.38]} c={brick} />
+      <Roof p={[0, 0.4, -0.35]} s={[0.48, 0.26, 1.4]} c={tile} r={[0, Math.PI / 2, 0]} />
+      {[-0.55, 0.55].map((x) => <group key={x}>
+        <Box p={[x, 0, 0.2]} s={[0.3, 0.32, 0.7]} c={brick} />
+        <Roof p={[x, 0.32, 0.2]} s={[0.38, 0.2, 0.76]} c={tile} />
+      </group>)}
+      <Box p={[0, 0, -0.155]} s={[0.24, 0.3, 0.02]} c="#6B3A2A" shadow={false} />
+      {[-0.32, 0.32].map((x) => <Windows key={x} y={0.18} z={-0.155} xs={[x]} c="#F3E3C3" size={0.1} />)}
+      {/* 埕上曬的東西和老榕樹 */}
+      {[-0.15, 0.05, 0.25].map((x, i) => <Cyl key={x} p={[x, 0.01, 0.35]} s={[0.16, 0.02, 0.16]} c={['#E6C76A', '#7FAE6A', '#E6C76A'][i]} shadow={false} />)}
+      <group position={[0.85, 0, 0.55]}>
+        <Cyl s={[0.1, 0.5, 0.1]} c={C.trunk} />
+        <mesh geometry={G.sph} material={windMat(C.leaf3, 0.04)} position={[0, 0.65, 0]} scale={[0.6, 0.45, 0.6]} castShadow />
+      </group>
+      <Bob p={[0, 0.5, -0.12]} amp={active ? 0.05 : 0.01} speed={2}>
+        <Box s={[0.3, 0.1, 0.02]} c="#2E3F5C" />
+        <Box p={[0, 0, 0.012]} s={[0.22, 0.04, 0.005]} c={C.gold} shadow={false} />
+      </Bob>
+    </group>
+  );
+}
+
 /** 景點模型（含標籤高度、點擊範圍）。 */
 export const MODELS: Record<Model, { h: number; r: number; C: (p: ModelProps & { kind: Model }) => JSX.Element }> = {
   tropic: { h: 2.5, r: 0.6, C: Tropic },
@@ -563,6 +833,17 @@ export const MODELS: Record<Model, { h: number; r: number; C: (p: ModelProps & {
   coffee: { h: 1.45, r: 0.75, C: Coffee },
   mansion: { h: 1.0, r: 0.8, C: Mansion },
   temple: { h: 1.3, r: 0.7, C: Temple },
+  zen: { h: 1.3, r: 0.85, C: Temple },
+  bamboo: { h: 1.3, r: 0.95, C: Temple },
+  hall: { h: 1.35, r: 0.95, C: Hall },
+  tunnel: { h: 1.2, r: 1.2, C: Tunnel },
+  pond: { h: 0.9, r: 0.95, C: Pond },
+  farm: { h: 0.9, r: 0.85, C: Farm },
+  papaya: { h: 0.95, r: 0.8, C: Papaya },
+  tomato: { h: 0.75, r: 0.85, C: Tomato },
+  lotus: { h: 0.5, r: 0.9, C: Lotus },
+  pharmacy: { h: 0.95, r: 0.5, C: Pharmacy },
+  heritage: { h: 0.9, r: 0.85, C: Heritage },
   market: { h: 0.8, r: 1.0, C: Market },
   butterfly: { h: 1.2, r: 0.85, C: Butterfly },
   herbfarm: { h: 0.9, r: 0.85, C: HerbFarm },

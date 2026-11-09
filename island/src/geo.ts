@@ -7,6 +7,7 @@ export type V2 = [number, number];
 
 interface Geo {
   frame: V2;
+  proj: { KX: number; KY: number; S: number; OX: number; OY: number };
   tropicY: number;
   land: V2[];
   rivers: { name: string; main: boolean; pts: V2[] }[];
@@ -22,6 +23,12 @@ const CX = 500, CY = 312;
 export const toWorld = ([x, y]: V2): V2 => [(x - CX) / K, (y - CY) / K];
 /** map-data.js 的百分比座標 → 世界座標。 */
 export const pctToWorld = (px: number, py: number): V2 => toWorld([(px / 100) * GEO.frame[0], (py / 100) * GEO.frame[1]]);
+
+/** 真實經緯度 → 世界座標（和鄉界、河川同一個投影）。 */
+export const latLonToWorld = (lat: number, lon: number): V2 => {
+  const { KX, KY, S, OX, OY } = GEO.proj;
+  return toWorld([lon * KX * S + OX, OY - lat * KY * S]);
+};
 
 export const LAND: V2[] = GEO.land.map(toWorld);
 export const RIVERS = GEO.rivers.map((r) => ({ ...r, pts: r.pts.map(toWorld) }));
