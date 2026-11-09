@@ -1,6 +1,7 @@
 # 23.5° 剛剛好的城市
 
 嘉義縣水上鄉觀光與地方創生網站。Node 伺服器 + 靜態頁面，零套件相依（只用 Node 內建模組）。
+首頁的「23.5° 水上島」是一座可以探索的 3D 低多邊形微縮島嶼，原始碼在 `island/`（見下方〈3D 島嶼〉）。
 
 頁面是真的靜態 HTML —— 後台按下儲存時，伺服器把內容寫進磁碟並重新產生所有頁面。
 所以線上改完馬上生效，但訪客拿到的仍然是純 HTML，沒有 JavaScript 也讀得到內容。
@@ -59,7 +60,7 @@ scripts: assets/map.js
 
 | 檔案 | 內容 |
 |---|---|
-| `index.html` | Hero、地方介紹、三大服務項目、互動式地圖、散策路線、報導摘要 |
+| `index.html` | Hero、3D 微縮島嶼、地方介紹、三大服務項目、散策路線、報導摘要 |
 | `taste.html` | 品味・水上在地美食（4 家） |
 | `culture.html` | 回歸・水上景點與文化（4 處） |
 | `grow.html` | 生長・水上農產（3 大作物）與創生店家（4 家） |
@@ -67,7 +68,7 @@ scripts: assets/map.js
 | `contact.html` | 聯絡資訊、Google 地圖嵌入、交通指引 |
 | `assets/style.css` | 全站樣式與設計 token（含深淺色主題） |
 | `assets/site.js` | 捲動進場、頁尾年份 |
-| `assets/map.js` | 互動式地圖的據點資料與互動邏輯 |
+| `assets/island/island.js` | 3D 島嶼（由 `island/` 建置產生，不要手改） |
 | `server.js` | 網站伺服器：靜態檔 + 內容 API + 存檔後重新產生頁面 |
 | `lib/render.mjs` | 渲染邏輯，CLI 與伺服器共用 |
 | `build.js` | 本機建置指令 |
@@ -76,7 +77,7 @@ scripts: assets/map.js
 | `sync.js` | 手動把線上內容抓回 `src/content.json`（`npm run sync`） |
 | `tools/build_map.py` | 由 OpenStreetMap 資料產生地圖幾何（僅在需要重繪地圖時使用） |
 | `tools/preview.html` | 六頁打包成單檔的預覽版，由 `build.py` 產生，網站本身用不到 |
-| `assets/map-data.js` | 地圖圖釘資料，由 `build.py` 從 `content.json` 產生，不要手改 |
+| `assets/map-data.js` | 地圖圖釘資料，由 `build.js` 從 `content.json` 產生，3D 島嶼讀它來放建築，不要手改 |
 
 根目錄的 `.html` 是建置產物，**不要直接編輯** —— 下次執行 `build.py` 會被覆蓋。
 要改版面請改 `src/`。
@@ -143,10 +144,51 @@ SITE_URL=https://你的網域 ADMIN_PASSWORD=你的密碼 npm run sync
 ### 其他不在後台裡的東西
 
 - **地圖圖釘**：也在 `content.json` 裡，每個據點的 `map` 欄位（後台有表單可以填）。
-  `x` / `y` 是圖釘位置（百分比），`lx` / `ly` 是名稱標籤偏移（px，用引線拉開擠在一起的市區店家），
-  `side` 決定標籤往左或往右，`label` 是地圖上的短名。`assets/map-data.js` 是產生出來的，不要手改。
+  `x` / `y` 是位置（舊版 1000 × 625 地圖的百分比座標），3D 島嶼就照這個位置蓋建築；
+  `label` 是地圖上的短名。`lx` / `ly` / `side` 是舊版平面地圖的標籤偏移，3D 島嶼用不到。
+  `assets/map-data.js` 是產生出來的，不要手改。
+- **3D 島嶼的模型、人文地產景分類與介紹文字**：在 `island/src/data.ts`（見下方）。
 - **頁面框架文字**（單元標題、引言、散策路線、悄悄話、聯絡資訊）：在 `src/pages/` 裡。
 - **配色**：改 `assets/style.css` 開頭的 `:root` token；深色主題的同名 token 在下方兩個區塊，三處要一起改。
+
+## 3D 島嶼（island/）
+
+首頁地圖區是一座照水上鄉真實行政區輪廓做成的低多邊形微縮島嶼：
+可以旋轉、縮放、點建築看介紹、依「人・文・地・產・景」篩選、把景點加入「小旅行」排路線並自動導覽。
+
+技術：React + TypeScript + Three.js + React Three Fiber + Drei，動畫用 `useFrame` 與 GSAP。
+建置成單一個 `assets/island/island.js`（IIFE，樣式也包在裡面），頁面用一般的 `<script>` 載入，
+所以網站本身仍是純靜態檔，部署時不需要建置。
+
+```bash
+cd island
+npm install
+npm run build        # 型別檢查 + 輸出 ../assets/island/island.js
+cd .. && node build.js   # 讓 tools/preview.html 也帶上新版島嶼
+```
+
+| 檔案 | 內容 |
+|---|---|
+| `island/src/geo.json` | 鄉界、河川、縱貫線幾何（`npm run geo` 從 `tools/ring.json`、`tools/lines.json` 產生） |
+| `island/src/data.ts` | 景點清單：模型種類、人文地產景分類、介紹文字；道路示意路線 |
+| `island/src/world.ts` | 農田、樹、房子、丘陵的擺放（固定亂數種子，每次長得一樣） |
+| `island/src/scene/models.tsx` | 各景點模型與專屬動畫（北回歸線光束、糖廠煙囪、咖啡蒸氣、行星旋轉、夜市燈串…） |
+| `island/src/scene/Landmarks.tsx` | 建築互動：待機微動、滑過浮起、點擊彈跳、選中光圈、標籤避讓 |
+| `island/src/scene/CameraRig.tsx` | 正交等角鏡頭、鏡頭飛行、平移限制 |
+| `island/src/App.tsx` | 介面：分類篩選、資訊卡、小旅行面板、全螢幕 |
+
+**店家位置與聯絡資訊來自後台**（`assets/map-data.js`）：後台改了圖釘位置，島上的建築也會跟著搬。
+後台新增、但 `data.ts` 裡沒設定模型的據點，會自動放一棟通用小店。
+市區店家彼此距離很近，島上會把建築稍微推開，所以位置是示意而非精確門牌。
+
+效能：樹、房子、農田都用 InstancedMesh；樹和作物的搖擺在頂點著色器裡算；
+地圖捲出畫面就暫停算圖；畫面掉格時自動降低解析度；`prefers-reduced-motion` 時停止環境動畫。
+手機上地圖嵌在頁面裡時不攔截捲動（可以點建築），按「進入全螢幕」才能旋轉縮放。
+不支援 WebGL 的瀏覽器會看到提示，並引導到各分類頁。
+
+**待確認的內容**：島上的「庄頭廟宇」「水上夜市」「蝴蝶生態園」是依設計方向放的示意景點，
+位置與介紹文字請依實際情況在 `island/src/data.ts` 修改；道路也是串連景點的示意路線
+（OpenStreetMap 道路資料需要另外下載）。
 
 ## 部署到 Zeabur
 
@@ -164,7 +206,7 @@ SITE_URL=https://你的網域 ADMIN_PASSWORD=你的密碼 npm run sync
 ## 資料來源與授權
 
 - 文字、店家資訊：《水上手冊》（P.01–P.11）。
-- 地圖幾何（鄉界、八掌溪、台鐵縱貫線）：**OpenStreetMap 貢獻者，ODbL 授權**。
+- 地圖幾何（鄉界、八掌溪等河川、台鐵縱貫線）：**OpenStreetMap 貢獻者，ODbL 授權**。
   網站上必須保留來源標註 —— 目前放在地圖下方與各頁頁尾。
 - 相關報導：全部為外部連結，僅引用標題與摘要，不轉載原文。
 
