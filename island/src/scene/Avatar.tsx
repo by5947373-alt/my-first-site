@@ -28,6 +28,16 @@ export function placeInfo(id: string, world?: World): { pos: THREE.Vector3; name
 }
 
 const DARK = '#2B2622';
+
+// 角色專用的小形狀
+/** 笑眼：上半圈的弧線「∩」 */
+const SMILE = new THREE.TorusGeometry(0.5, 0.17, 8, 16, Math.PI);
+/** 口罩：貼著臉下半部的一片曲面 */
+const MASK = new THREE.SphereGeometry(0.5, 24, 10, Math.PI / 2 - 0.85, 1.7, 1.66, 0.72);
+/** 裙子：上窄下寬的圓台 */
+const SKIRT = (() => { const g = new THREE.CylinderGeometry(0.3, 0.5, 1, 24); g.translate(0, 0.5, 0); return g; })();
+/** 斗笠：淺淺的圓錐 */
+const KASA = (() => { const g = new THREE.ConeGeometry(0.5, 1, 28); g.translate(0, 0.5, 0); return g; })();
 type Ref = React.MutableRefObject<THREE.Group | null>;
 
 function Hair({ a }: { a: AvatarT }) {
@@ -52,7 +62,13 @@ function Hair({ a }: { a: AvatarT }) {
 
 function Hat({ a }: { a: AvatarT }) {
   switch (a.hat) {
-    case '斗笠': return <mesh geometry={G.cone} material={mat('#E2C17C')} position={[0, 0.1, 0]} scale={[0.72, 0.2, 0.72]} castShadow />;
+    case '斗笠': return <>
+      {/* 戴在頭頂的竹編斗笠：淺圓錐＋一圈帽緣＋下巴繫帶 */}
+      <mesh geometry={KASA} material={mat('#E8C987')} position={[0, 0.02, 0]} scale={[0.62, 0.17, 0.62]} castShadow />
+      <mesh geometry={G.cyl} material={mat('#C9A35E')} position={[0, 0.015, 0]} scale={[0.63, 0.012, 0.63]} />
+      <mesh geometry={G.cyl} material={mat('#C9A35E')} position={[0, 0.09, 0]} scale={[0.3, 0.01, 0.3]} />
+      {[-1, 1].map((x) => <mesh key={x} geometry={G.box} material={mat('#9C7452')} position={[x * 0.16, -0.11, 0.04]} rotation={[0, 0, x * 0.15]} scale={[0.008, 0.22, 0.008]} />)}
+    </>;
     case '棒球帽': return <><mesh geometry={G.dome} material={mat('#E5574A')} position={[0, 0.06, 0]} scale={[0.38, 0.3, 0.38]} castShadow /><mesh geometry={G.box} material={mat('#E5574A')} position={[0, 0.07, 0.2]} scale={[0.24, 0.025, 0.16]} /></>;
     case '草帽': return <><mesh geometry={G.cyl} material={mat('#EED79A')} position={[0, 0.09, 0]} scale={[0.6, 0.02, 0.6]} castShadow /><mesh geometry={G.dome} material={mat('#EED79A')} position={[0, 0.09, 0]} scale={[0.34, 0.24, 0.34]} /><mesh geometry={G.cyl} material={mat('#F07E6E')} position={[0, 0.1, 0]} scale={[0.35, 0.03, 0.35]} /></>;
     case '毛帽': return <><mesh geometry={G.dome} material={mat('#6FBF8E')} position={[0, 0.05, 0]} scale={[0.4, 0.34, 0.4]} castShadow /><mesh geometry={G.sph} material={mat('#FFFFFF')} position={[0, 0.24, 0]} scale={0.09} /></>;
@@ -65,7 +81,7 @@ function Face({ a }: { a: AvatarT }) {
   const z = 0.175;
   const eyes = (() => {
     switch (a.eyes) {
-      case '笑眼': return [-1, 1].map((s) => <mesh key={s} geometry={G.torus} material={mat(DARK)} position={[s * 0.065, 0.0, z]} scale={[0.05, 0.05, 0.05]} rotation={[0, 0, 0]} />);
+      case '笑眼': return [-1, 1].map((s) => <mesh key={s} geometry={SMILE} material={mat(DARK)} position={[s * 0.065, -0.012, z - 0.004]} scale={[0.055, 0.05, 0.03]} />);
       case '大眼': return [-1, 1].map((s) => <group key={s}><mesh geometry={G.sph} material={mat(DARK)} position={[s * 0.07, 0, z - 0.005]} scale={[0.06, 0.075, 0.03]} /><mesh geometry={G.sph} material={mat('#FFFFFF')} position={[s * 0.07 + 0.012, 0.018, z + 0.008]} scale={0.02} /></group>);
       case '瞇眼': return [-1, 1].map((s) => <mesh key={s} geometry={G.box} material={mat(DARK)} position={[s * 0.065, 0, z]} scale={[0.06, 0.012, 0.01]} />);
       default: return [-1, 1].map((s) => <mesh key={s} geometry={G.sph} material={mat(DARK)} position={[s * 0.065, 0, z]} scale={[0.035, 0.05, 0.02]} />);
@@ -83,7 +99,11 @@ function Face({ a }: { a: AvatarT }) {
     switch (a.face) {
       case '眼鏡': return <>{[-1, 1].map((s) => <mesh key={s} geometry={G.torus} material={mat('#3D3A4E')} position={[s * 0.07, 0, z + 0.01]} scale={[0.055, 0.055, 0.02]} />)}<mesh geometry={G.box} material={mat('#3D3A4E')} position={[0, 0.005, z + 0.012]} scale={[0.05, 0.01, 0.01]} /></>;
       case '墨鏡': return <>{[-1, 1].map((s) => <mesh key={s} geometry={G.box} material={mat('#26252D')} position={[s * 0.07, 0, z + 0.008]} scale={[0.1, 0.065, 0.02]} />)}<mesh geometry={G.box} material={mat('#26252D')} position={[0, 0.02, z + 0.01]} scale={[0.06, 0.012, 0.012]} /></>;
-      case '口罩': return <mesh geometry={G.box} material={mat('#F4F6F8')} position={[0, -0.12, z - 0.03]} scale={[0.22, 0.11, 0.06]} />;
+      case '口罩': return <>
+        {/* 貼著臉的曲面口罩＋兩條耳繩 */}
+        <mesh geometry={MASK} material={mat('#EAF3F8', { side: THREE.DoubleSide })} position={[0, 0.01, 0]} scale={0.375} />
+        {[-1, 1].map((x) => <mesh key={x} geometry={G.box} material={mat('#D5E3EC')} position={[x * 0.168, -0.035, 0.05]} rotation={[0, x * 0.6, 0]} scale={[0.006, 0.006, 0.12]} />)}
+      </>;
       default: return null;
     }
   })();
@@ -101,10 +121,32 @@ function Held({ a }: { a: AvatarT }) {
   switch (a.hold) {
     case '仙草茶': return <><mesh geometry={G.cyl} material={mat('#FFFFFF')} position={[0, -0.04, 0.04]} scale={[0.07, 0.11, 0.07]} /><mesh geometry={G.cyl} material={mat('#3B2C22')} position={[0, 0.0, 0.04]} scale={[0.062, 0.06, 0.062]} /><mesh geometry={G.cyl} material={mat('#F07E6E')} position={[0.01, 0.06, 0.04]} scale={[0.01, 0.08, 0.01]} /></>;
     case '相機': return <><mesh geometry={G.box} material={mat('#3D3A4E')} position={[0, -0.02, 0.05]} scale={[0.12, 0.08, 0.06]} /><mesh geometry={G.cyl} material={mat('#9AA3B5')} position={[0, 0.0, 0.09]} rotation={[Math.PI / 2, 0, 0]} scale={[0.05, 0.04, 0.05]} /></>;
-    case '氣球': return <><mesh geometry={G.cyl} material={mat('#FFFFFF')} position={[0, 0, 0]} scale={[0.005, 0.5, 0.005]} /><mesh geometry={G.sph} material={mat('#F07E6E')} position={[0, 0.6, 0]} scale={[0.2, 0.24, 0.2]} castShadow /></>;
+    // 氣球不拿在會揮動的手上（見 Balloon），這裡不畫
+    case '氣球': return null;
     case '地圖': return <mesh geometry={G.box} material={mat('#F6E3B4')} position={[0, -0.02, 0.07]} rotation={[-0.4, 0, 0]} scale={[0.16, 0.12, 0.01]} />;
     default: return null;
   }
+}
+
+/** 氣球：綁在另一隻手（左手）邊，線一直往上，輕輕飄。 */
+function Balloon() {
+  const ref = useRef<THREE.Group>(null!);
+  useFrame(() => {
+    if (frozen()) return;
+    const t = ANIM.value;
+    ref.current.rotation.z = Math.sin(t * 1.3) * 0.08;
+    ref.current.rotation.x = Math.cos(t * 1.1) * 0.06;
+  });
+  return (
+    <group position={[-0.2, 0.2, 0.04]}>
+      <group ref={ref}>
+        <mesh geometry={G.cyl} material={mat('#FFFFFF')} position={[0, 0, 0]} scale={[0.006, 0.62, 0.006]} />
+        <mesh geometry={G.sph} material={mat('#F07E6E')} position={[0, 0.74, 0]} scale={[0.22, 0.26, 0.22]} castShadow />
+        <mesh geometry={G.cone} material={mat('#F07E6E')} position={[0, 0.6, 0]} scale={[0.04, 0.03, 0.04]} />
+        <mesh geometry={G.sph} material={mat('#FFFFFF')} position={[0.06, 0.8, 0.09]} scale={[0.04, 0.06, 0.02]} />
+      </group>
+    </group>
+  );
 }
 
 /** 角色本體（臉朝 +z）。 */
@@ -125,11 +167,12 @@ export function AvatarFigure({ a, armL, armR, body }: { a: AvatarT; armL: Ref; a
           </group>
         ))}
         {a.bottom === '短褲' && [-1, 1].map((s) => <mesh key={s} geometry={G.cyl} material={bot} position={[s * 0.06, 0.12, 0]} scale={[0.09, 0.09, 0.09]} castShadow />)}
-        {a.bottom === '裙子' && <mesh geometry={G.cone} material={bot} position={[0, 0.08, 0]} scale={[0.32 * B, 0.2, 0.28 * B]} castShadow />}
+        {a.bottom === '裙子' && <mesh geometry={SKIRT} material={bot} position={[0, 0.11, 0]} scale={[0.36 * B, 0.13, 0.32 * B]} castShadow />}
         {/* 身體 */}
         <mesh geometry={G.sph} material={top} position={[0, 0.31, 0]} scale={[0.27 * B, 0.27, 0.22 * B]} castShadow />
         {a.top === '襯衫' && [-1, 1].map((s) => <mesh key={s} geometry={G.box} material={mat('#FFFFFF')} position={[s * 0.04, 0.43, 0.08]} rotation={[0.4, 0, s * 0.5]} scale={[0.06, 0.02, 0.05]} />)}
         {a.top === '連帽外套' && <><mesh geometry={G.sph} material={top} position={[0, 0.45, -0.1]} scale={[0.22, 0.12, 0.14]} /><mesh geometry={G.box} material={mat('#FFFFFF')} position={[0, 0.3, 0.108 * B]} scale={[0.012, 0.2, 0.01]} /></>}
+        {a.hold === '氣球' && <Balloon />}
         {a.bag === '背包' && <mesh geometry={G.box} material={mat('#E39B7B')} position={[0, 0.2, -0.14 * B]} scale={[0.2, 0.22, 0.1]} castShadow />}
         {a.bag === '斜背包' && <><mesh geometry={G.box} material={mat('#3D3A4E')} position={[0, 0.31, 0.105 * B]} rotation={[0, 0, 0.8]} scale={[0.32, 0.02, 0.01]} /><mesh geometry={G.box} material={mat('#C08E5D')} position={[-0.13 * B, 0.17, 0.05]} scale={[0.1, 0.09, 0.06]} /></>}
         {/* 手臂（可以擺姿勢） */}
