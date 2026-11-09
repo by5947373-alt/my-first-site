@@ -4,7 +4,8 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { World } from '../world';
 import { BOUNDS } from '../geo';
-import { ANIM, Box, C, Sph, G, mat } from './kit';
+import { ANIM, Box, C, G, mat } from './kit';
+import { Chibi } from './Folk';
 import { frozen } from '../store';
 
 const tmp = new THREE.Vector3();
@@ -78,12 +79,13 @@ function Bike({ curve, speed, offset, shirt }: { curve: THREE.Curve<THREE.Vector
           position={[x, 0.07, 0]} scale={[0.14, 0.14, 0.4]} />
       ))}
       <Box p={[0, 0.07, 0]} s={[0.2, 0.025, 0.02]} c={C.red} shadow={false} />
-      <Box p={[-0.02, 0.1, 0]} s={[0.07, 0.15, 0.06]} c={shirt} />
-      <Sph p={[-0.01, 0.3, 0]} s={0.07} c="#F2D3B6" />
-      <Box p={[-0.01, 0.335, 0]} s={[0.075, 0.025, 0.075]} c={C.coral} shadow={false} />
-      <group ref={legs} position={[-0.02, 0.1, 0]}>
-        <Box p={[0.02, -0.06, 0]} s={[0.03, 0.08, 0.03]} c={C.sky} shadow={false} />
+      {/* 騎車的小居民（坐著，安全帽） */}
+      <group position={[-0.02, 0.07, 0]} scale={0.85}>
+        <Chibi shirt={shirt} seed={Math.round(offset * 10)} sitting>
+          <mesh geometry={G.dome} material={mat(C.coral)} position={[0, 0.28, 0]} scale={[0.22, 0.17, 0.22]} />
+        </Chibi>
       </group>
+      <group ref={legs} position={[-0.02, 0.1, 0]} />
     </group>
   );
 }

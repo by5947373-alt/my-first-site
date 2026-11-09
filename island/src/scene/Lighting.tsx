@@ -4,7 +4,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore, frozen } from '../store';
-import { NIGHT, mat, C } from './kit';
+import { NIGHT, addGrow, mat, C } from './kit';
 
 interface Key { t: number; sun: string; si: number; sky: string; gnd: string; hi: number; amb: number; bg1: string; bg2: string; night: number }
 const KEYS: Key[] = [
@@ -71,8 +71,8 @@ export function Lighting({ shadow }: { shadow: number }) {
     const el = document.querySelector<HTMLElement>('.isl-stage');
     if (el) { el.style.setProperty('--sky1', s.bg1); el.style.setProperty('--sky2', s.bg2); }
     // 建築上的窗戶在夜裡亮起
-    (mat(C.glass) as THREE.MeshLambertMaterial).emissive.setRGB(s.night * 0.95, s.night * 0.7, s.night * 0.3);
-    (mat(C.butter) as THREE.MeshLambertMaterial).emissive.setRGB(s.night * 0.5, s.night * 0.35, s.night * 0.1);
+    (mat(C.glass) as THREE.MeshToonMaterial).emissive.setRGB(s.night * 0.95, s.night * 0.7, s.night * 0.3);
+    (mat(C.butter) as THREE.MeshToonMaterial).emissive.setRGB(s.night * 0.5, s.night * 0.35, s.night * 0.1);
   });
   return (
     <>
@@ -102,8 +102,8 @@ export function Lighting({ shadow }: { shadow: number }) {
 export function StreetLamps({ spots }: { spots: { x: number; z: number }[] }) {
   const pole = useRef<THREE.InstancedMesh>(null!);
   const bulb = useRef<THREE.InstancedMesh>(null!);
-  const glow = useMemo(() => new THREE.MeshBasicMaterial({ color: '#E9E2D2' }), []);
-  const halo = useMemo(() => new THREE.MeshBasicMaterial({ color: '#FFD27A', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }), []);
+  const glow = useMemo(() => { const m = new THREE.MeshBasicMaterial({ color: '#E9E2D2' }); addGrow(m, 'bulb'); return m; }, []);
+  const halo = useMemo(() => { const m = new THREE.MeshBasicMaterial({ color: '#FFD27A', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }); addGrow(m, 'halo'); return m; }, []);
   const haloRef = useRef<THREE.InstancedMesh>(null!);
   const day = useMemo(() => new THREE.Color('#E9E2D2'), []), night = useMemo(() => new THREE.Color('#FFD27A'), []);
   const placed = useRef(false);

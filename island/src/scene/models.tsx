@@ -7,6 +7,7 @@ import gsap from 'gsap';
 import { ANIM, Box, C, Cone, Cyl, Cyl6, Dome, G, House, Ico, Pyr, Roof, Sph, Windows, mat, windMat, type Vec3 } from './kit';
 import type { Model } from '../data';
 import { frozen } from '../store';
+import { Chibi } from './Folk';
 
 export interface ModelProps { active: boolean; pulse: number }
 const still = frozen;
@@ -15,7 +16,7 @@ const still = frozen;
 function Puffs({ p, count = 5, size = 0.18, rise = 1.4, speed = 0.35, c = '#FFFFFF', boost }:
   { p: Vec3; count?: number; size?: number; rise?: number; speed?: number; c?: string; boost?: boolean }) {
   const items = useMemo(() => Array.from({ length: count }, (_, i) => ({
-    m: new THREE.MeshLambertMaterial({ color: c, flatShading: true, transparent: true, depthWrite: false }),
+    m: new THREE.MeshToonMaterial({ color: c, transparent: true, depthWrite: false }),
     o: i / count, drift: (i % 2 ? 1 : -1) * 0.12,
   })), [count, c]);
   const refs = useRef<THREE.Mesh[]>([]);
@@ -63,7 +64,7 @@ function Tropic({ active, pulse }: ModelProps) {
   const sun = useRef<THREE.Mesh>(null!);
   const beamMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#FFE08A', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }), []);
   const ringMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#F6C453', transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }), []);
-  const sunMat = useMemo(() => new THREE.MeshLambertMaterial({ color: C.gold, emissive: new THREE.Color('#F2B544'), emissiveIntensity: 0.2, flatShading: true }), []);
+  const sunMat = useMemo(() => new THREE.MeshToonMaterial({ color: C.gold, emissive: new THREE.Color('#F2B544'), emissiveIntensity: 0.2 }), []);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   useEffect(() => {
     if (!pulse) return;
@@ -253,6 +254,7 @@ function Temple({ active }: ModelProps) {
 function Market({ active }: ModelProps) {
   const bulbs = useRef<THREE.MeshBasicMaterial[]>([]);
   const people = useRef<THREE.Group[]>([]);
+  const gaits = useRef([0, 1, 2, 3].map(() => ({ phase: 0, moving: true })));
   const awn = [C.coral, C.sky, C.butter, C.sage, C.mauve];
   const bulbList = useMemo(() => Array.from({ length: 14 }, (_, i) => i), []);
   useFrame(() => {
@@ -266,8 +268,8 @@ function Market({ active }: ModelProps) {
     people.current.forEach((g, i) => {
       if (!g) return;
       g.position.x = Math.sin(t * 0.4 + i * 2.1) * 0.7;
-      g.position.y = Math.abs(Math.sin(t * 5 + i)) * 0.03;
       g.rotation.y = Math.cos(t * 0.4 + i * 2.1) > 0 ? 0 : Math.PI;
+      gaits.current[i].phase = t * 9 + i;
     });
   });
   return (
@@ -298,9 +300,8 @@ function Market({ active }: ModelProps) {
       {[-0.95, 0.95].map((x) => <Cyl key={x} p={[x, 0, 0]} s={[0.03, 0.45, 0.03]} c={C.woodDark} shadow={false} />)}
       {/* 逛夜市的人 */}
       {[C.sky, C.coral, C.sage, C.butter].map((c, i) => (
-        <group key={i} ref={(g) => { if (g) people.current[i] = g; }} position={[0, 0, (i - 1.5) * 0.08]}>
-          <Box p={[0, 0, 0]} s={[0.06, 0.13, 0.06]} c={c} />
-          <Sph p={[0, 0.17, 0]} s={0.07} c="#F2D3B6" />
+        <group key={i} ref={(g) => { if (g) people.current[i] = g; }} position={[0, 0, (i - 1.5) * 0.09]}>
+          <group scale={0.7}><Chibi shirt={c} seed={i + 3} gait={{ current: gaits.current[i] }} /></group>
         </group>
       ))}
     </group>

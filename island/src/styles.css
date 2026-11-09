@@ -231,3 +231,25 @@ html, body{ margin:0; height:100%; overflow:hidden; background:#FBF1D6; overscro
 @media (prefers-reduced-motion:reduce){
   .isl *{ animation:none !important; transition:none !important; }
 }
+
+/* ── 療癒系的彈性手感：按下去會「壓扁」，放開彈回來 ── */
+.isl-tool, .isl-btn2, .isl-chip, .isl-time-btn, .isl-tabs button, .isl-options button, .isl-quiz-cta, .isl-back, .isl-brand{
+  transition:transform .35s cubic-bezier(.34,1.8,.5,1), background .2s, color .2s, box-shadow .2s;
+}
+.isl-tool:active, .isl-btn2:active, .isl-chip:active, .isl-time-btn:active, .isl-tabs button:active, .isl-back:active{ transform:scale(.88) !important; transition-duration:.08s; }
+.isl-options button:active, .isl-quiz-cta:active{ transform:scale(.96) !important; transition-duration:.08s; }
+.isl-brand:hover{ transform:rotate(-2deg) scale(1.03); }
+.isl-tool:hover svg, .isl-time-btn:hover svg{ animation:isl-wiggle .5s ease; }
+@keyframes isl-wiggle{ 0%,100%{ transform:rotate(0); } 25%{ transform:rotate(-12deg) scale(1.1); } 60%{ transform:rotate(8deg); } }
+.isl-label{ border:2px solid rgba(255,255,255,.9); padding:4px 12px 4px 10px; font-size:12px; }
+.isl-label:hover{ animation:isl-boing .5s cubic-bezier(.3,1.6,.5,1); }
+@keyframes isl-boing{ 0%{ transform:scale(1); } 30%{ transform:scale(1.15, .9); } 60%{ transform:scale(.95, 1.08); } 100%{ transform:translateY(-3px) scale(1.06); } }
+/* 訊息像對話泡泡，從下面彈出來 */
+.isl-toast{ border-left:0; border:2.5px solid #F3D9C6; border-radius:22px; animation:isl-bubble .5s cubic-bezier(.3,1.7,.5,1) both; }
+.isl-toast::after{ content:""; position:absolute; left:34px; bottom:-12px; border:10px solid transparent; border-top-color:var(--paper); border-bottom:0; filter:drop-shadow(0 2.5px 0 #F3D9C6); }
+@keyframes isl-bubble{ from{ opacity:0; transform:translate(-50%, 20px) scale(.7); } }
+.isl-modal-card{ animation:isl-card-boing .55s cubic-bezier(.3,1.6,.5,1) both; }
+@keyframes isl-card-boing{ from{ opacity:0; transform:translateY(26px) scale(.85); } }
+@media (prefers-reduced-motion:reduce){
+  .isl-tool:hover svg, .isl-time-btn:hover svg, .isl-label:hover{ animation:none !important; }
+}

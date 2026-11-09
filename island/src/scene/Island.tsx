@@ -6,28 +6,80 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { TROPIC_Z, landSpansAtZ, ribbon, curveOf, toWorld, type V2 } from '../geo';
 import { landShape, type World } from '../world';
-import { C, G, mat, windMat } from './kit';
+import { C, G, mat, texMat, windMat } from './kit';
 import { useStore, frozen } from '../store';
 
 const dummy = new THREE.Object3D();
 const color = new THREE.Color();
 
+/** 草地貼圖：底色上點綴深淺草紋和小花，像柔軟的草皮。 */
+function grassTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 256;
+  const g = cv.getContext('2d')!;
+  g.fillStyle = C.grass; g.fillRect(0, 0, 256, 256);
+  let seed = 7;
+  const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  // 小小的三角草紋
+  for (let i = 0; i < 220; i++) {
+    const x = r() * 256, y = r() * 256, s = 3 + r() * 3;
+    g.fillStyle = r() < 0.6 ? 'rgba(70,140,60,.22)' : 'rgba(200,240,160,.35)';
+    g.beginPath(); g.moveTo(x, y - s); g.lineTo(x + s * 0.8, y + s * 0.6); g.lineTo(x - s * 0.8, y + s * 0.6); g.closePath(); g.fill();
+  }
+  // 點點小花
+  for (let i = 0; i < 26; i++) {
+    const x = r() * 256, y = r() * 256;
+    g.fillStyle = ['#FFFFFF', '#FFE58A', '#FFB7C9'][i % 3];
+    for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 2.2, y + Math.sin(a) * 2.2, 1.6, 0, 7); g.fill(); }
+    g.fillStyle = '#F5B83C'; g.beginPath(); g.arc(x, y, 1.3, 0, 7); g.fill();
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(0.28, 0.28);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+/** 土層貼圖：一層層的地層色帶，邊界微微起伏。 */
+function strataTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = 64; cv.height = 256;
+  const g = cv.getContext('2d')!;
+  const bands = ['#EBCB9B', '#E2BC88', '#EED3A8', '#D9AE79', '#E7C592', '#CFA06C'];
+  const h = 256 / bands.length;
+  bands.forEach((c, i) => {
+    g.fillStyle = c;
+    g.beginPath(); g.moveTo(0, i * h);
+    for (let x = 0; x <= 64; x += 8) g.lineTo(x, i * h + Math.sin(x * 0.2 + i) * 3);
+    g.lineTo(64, 256); g.lineTo(0, 256); g.closePath(); g.fill();
+  });
+  // 小石頭
+  for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(150,110,70,.25)'; g.beginPath(); g.ellipse(Math.random() * 64, Math.random() * 256, 2.5, 1.6, 0, 0, 7); g.fill(); }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(0.5, 0.6);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 function Base() {
-  const geos = useMemo(() => {
+  const { geos, grass, strata } = useMemo(() => {
     const shape = landShape();
-    const top = new THREE.ExtrudeGeometry(shape, { depth: 0.3, bevelEnabled: true, bevelThickness: 0.1, bevelSize: 0.12, bevelSegments: 1, curveSegments: 1 });
-    const soil = new THREE.ExtrudeGeometry(shape, { depth: 1.25, bevelEnabled: false, curveSegments: 1 });
-    const bottom = new THREE.ExtrudeGeometry(shape, { depth: 0.45, bevelEnabled: true, bevelThickness: 0.05, bevelSize: -0.05, bevelSegments: 1, curveSegments: 1 });
-    return { top, soil, bottom };
+    // 草皮比土層多凸出一圈，邊緣圓潤，像蛋糕上的奶油
+    const top = new THREE.ExtrudeGeometry(shape, { depth: 0.22, bevelEnabled: true, bevelThickness: 0.14, bevelSize: 0.16, bevelSegments: 3, curveSegments: 1 });
+    const soil = new THREE.ExtrudeGeometry(shape, { depth: 1.35, bevelEnabled: true, bevelThickness: 0.0, bevelSize: 0.0, bevelSegments: 1, curveSegments: 1 });
+    const bottom = new THREE.ExtrudeGeometry(shape, { depth: 0.4, bevelEnabled: true, bevelThickness: 0.12, bevelSize: -0.04, bevelSegments: 3, curveSegments: 1 });
+    return { geos: { top, soil, bottom }, grass: texMat(grassTexture()), strata: texMat(strataTexture()) };
   }, []);
   const rot: [number, number, number] = [-Math.PI / 2, 0, 0];
   return (
     <group>
       {/* 草皮層 */}
-      <mesh geometry={geos.top} rotation={rot} position={[0, -0.4, 0]} material={[mat(C.grass), mat(C.grassSide)]} receiveShadow />
-      {/* 土壤層（底座的厚度） */}
-      <mesh geometry={geos.soil} rotation={rot} position={[0, -1.6, 0]} material={[mat(C.soilDark), mat(C.soil)]} castShadow />
-      <mesh geometry={geos.bottom} rotation={rot} position={[0, -2.05, 0]} material={[mat(C.base), mat(C.soilDark)]} />
+      <mesh geometry={geos.top} rotation={rot} position={[0, -0.36, 0]} material={[grass, mat(C.grassSide)]} receiveShadow />
+      {/* 土壤層（底座的厚度，有一層層的地層） */}
+      <mesh geometry={geos.soil} rotation={rot} position={[0, -1.72, 0]} material={[mat(C.soilDark), strata]} castShadow />
+      <mesh geometry={geos.bottom} rotation={rot} position={[0, -2.2, 0]} material={[mat(C.base), mat(C.soilDark)]} />
     </group>
   );
 }
@@ -41,7 +93,7 @@ function Hills({ world }: { world: World }) {
       dummy.rotation.set(0, h.tone * 3, 0);
       dummy.updateMatrix();
       ref.current.setMatrixAt(i, dummy.matrix);
-      ref.current.setColorAt(i, color.set(h.tone < 0.5 ? '#9CC67E' : '#A9CF88'));
+      ref.current.setColorAt(i, color.set(h.tone < 0.5 ? '#86C866' : '#97D277'));
     });
     ref.current.instanceMatrix.needsUpdate = true;
     if (ref.current.instanceColor) ref.current.instanceColor.needsUpdate = true;
@@ -138,10 +190,10 @@ function Rivers({ world }: { world: World }) {
     return {
       tex,
       water: mergeGeometries(world.rivers.map((r) => ribbon(r.curve, r.main ? 0.62 : 0.26, 0.03, 0.2))),
-      bank: mergeGeometries(world.rivers.map((r) => ribbon(r.curve, (r.main ? 0.62 : 0.26) + 0.22, 0.012, 0.2))),
+      bank: mergeGeometries(world.rivers.map((r) => ribbon(r.curve, (r.main ? 0.62 : 0.26) + 0.26, 0.012, 0.2))),
     };
   }, [world]);
-  const m = useMemo(() => new THREE.MeshLambertMaterial({ map: tex }), [tex]);
+  const m = useMemo(() => texMat(tex), [tex]);
   useFrame((_, dt) => { if (!frozen()) tex.offset.x -= dt * 0.18; });
   return (
     <>

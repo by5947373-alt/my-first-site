@@ -6,7 +6,8 @@ import { Line } from '@react-three/drei';
 import * as THREE from 'three';
 import { CAT, LINKS, type Link, type Poi } from '../data';
 import { useStore, frozen } from '../store';
-import { Box, C, Sph } from './kit';
+import { Box, C } from './kit';
+import { Chibi, type ChibiHandle, type Gait } from './Folk';
 
 interface Resolved { link: Link; a: Poi; b: Poi; i: number; color: string; ground: THREE.QuadraticBezierCurve3; arc: THREE.Vector3[] }
 
@@ -56,7 +57,8 @@ const SHIRTS = [C.coral, C.sky, C.sage, C.butter, C.mauve, C.apricot];
 
 function Carrier({ r }: { r: Resolved }) {
   const g = useRef<THREE.Group>(null!);
-  const legs = useRef<THREE.Group>(null!);
+  const chibi = useRef<ChibiHandle>(null);
+  const gait = useRef<Gait>({ phase: 0, moving: false });
   const len = useMemo(() => r.ground.getLength(), [r]);
   const s = useRef(((r.i * 0.37) % 1) * len * 2);
   const tmp = useMemo(() => new THREE.Vector3(), []), tan = useMemo(() => new THREE.Vector3(), []);
@@ -81,11 +83,13 @@ function Carrier({ r }: { r: Resolved }) {
     g.current.position.set(tmp.x, 0.03, tmp.z);
     g.current.rotation.y = Math.atan2(-tan.z, tan.x);
     const walking = (x < len) || (x > len + 0.8 && x < len * 2 + 0.8);
-    legs.current.position.y = walking ? Math.abs(Math.sin(x * 14)) * 0.025 : 0;
+    gait.current.moving = walking;
+    if (walking) gait.current.phase += Math.min(dt, 0.1) * 11;
   });
   const click = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 6) return;
     e.stopPropagation();
+    chibi.current?.cheer();
     useStore.getState().say(`小人正把「${r.link.what}」從 ${r.a.name} 搬到 ${r.b.name}。${r.link.story}`);
   };
   const shirt = SHIRTS[r.i % SHIRTS.length];
@@ -93,14 +97,12 @@ function Carrier({ r }: { r: Resolved }) {
     <group ref={g} onClick={click}
       onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }}
       onPointerOut={() => { document.body.style.cursor = ''; }}>
-      <group ref={legs}>
-        <Box p={[0, 0, 0]} s={[0.07, 0.07, 0.07]} c={C.dark} shadow={false} />
-        <Box p={[0, 0.07, 0]} s={[0.09, 0.11, 0.08]} c={shirt} />
-        <Sph p={[0, 0.22, 0]} s={0.08} c="#F2D3B6" />
-        {/* 頭上扛著的貨物，顏色跟出發地的分類一樣 */}
-        <Box p={[0, 0.27, 0]} s={[0.13, 0.08, 0.11]} c={r.color} />
-      </group>
-      <mesh visible={false} position={[0, 0.18, 0]} scale={[0.35, 0.4, 0.35]}>
+      <Chibi ref={chibi} shirt={shirt} seed={r.i} gait={gait}>
+        {/* 頭上頂著的貨物，顏色跟出發地的分類一樣 */}
+        <Box p={[0, 0.36, 0]} s={[0.16, 0.1, 0.14]} c={r.color} />
+        <Box p={[0, 0.455, 0]} s={[0.17, 0.012, 0.03]} c={C.white} shadow={false} />
+      </Chibi>
+      <mesh visible={false} position={[0, 0.22, 0]} scale={[0.4, 0.5, 0.4]}>
         <boxGeometry />
       </mesh>
     </group>

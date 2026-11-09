@@ -31,7 +31,27 @@ function Landmark({ poi, index, y0 }: { poi: Poi; index: number; y0: number }) {
   const crowded = useStore((s) => s.hidden.includes(poi.id));
   const labelsOn = useStore((s) => s.showLabels);
   // 有些建築的待機動畫比較明顯，有些幾乎不動——讓整座島的動態有層次，不會同時一起晃
-  const idle = useMemo(() => ({ amp: [0.02, 0.0, 0.035, 0.012][index % 4], speed: 0.8 + (index % 5) * 0.17, phase: index * 1.7 }), [index]);
+  const idle = useMemo(() => ({ amp: [0.018, 0.006, 0.028, 0.012][index % 4], speed: 1.1 + (index % 5) * 0.2, phase: index * 1.7 }), [index]);
+  const size = useRef(1);
+
+  // 開場：建築一棟棟從地面「啵」地彈出來
+  useEffect(() => {
+    if (useStore.getState().reduced) return;
+    const sc = pop.current.scale;
+    sc.set(0.001, 0.001, 0.001);
+    const tw = gsap.to(sc, { x: 1, y: 1, z: 1, duration: 0.9, delay: 0.7 + index * 0.08, ease: 'elastic.out(1, 0.45)' });
+    return () => { tw.kill(); sc.set(1, 1, 1); };
+  }, [index]);
+
+  // 滑鼠移上去：像果凍一樣抖一下
+  useEffect(() => {
+    if (!hovered || useStore.getState().reduced) return;
+    const sc = pop.current.scale;
+    const tl = gsap.timeline();
+    tl.to(sc, { x: 1.1, y: 0.88, z: 1.1, duration: 0.09, ease: 'power2.out' })
+      .to(sc, { x: 1, y: 1, z: 1, duration: 0.9, ease: 'elastic.out(1.3, 0.28)' });
+    return () => { tl.kill(); };
+  }, [hovered]);
 
   // 點擊：擠壓 → 彈起 → 回彈
   useEffect(() => {
@@ -47,13 +67,15 @@ function Landmark({ poi, index, y0 }: { poi: Poi; index: number; y0: number }) {
   useFrame((_, dt) => {
     const t = ANIM.value;
     const still = frozen();
-    const bob = still ? 0 : Math.sin(t * idle.speed + idle.phase) * idle.amp;
-    const ty = (selected ? 0.3 : hovered ? 0.16 : filtered ? -0.12 : 0) + bob;
-    const ts = selected ? 1.1 : hovered ? 1.07 : filtered ? 0.82 : 1;
+    // 待機：像在呼吸一樣輕輕伸縮（每棟節奏、幅度都不一樣）
+    const b = still ? 0 : Math.sin(t * idle.speed + idle.phase) * idle.amp;
+    const ty = selected ? 0.28 : hovered ? 0.08 : filtered ? -0.12 : 0;
+    const ts = selected ? 1.1 : hovered ? 1.05 : filtered ? 0.82 : 1;
     const g = lift.current;
     g.position.y = damp(g.position.y, ty, 9, dt);
-    const sc = damp(g.scale.x, ts, 9, dt);
-    g.scale.setScalar(sc);
+    size.current = damp(size.current, ts, 9, dt);
+    const sc = size.current;
+    g.scale.set(sc * (1 - b * 0.5), sc * (1 + b), sc * (1 - b * 0.5));
     // 腳下的光圈：選中時呼吸、滑過時淡淡出現、篩選到這一類時常亮
     const tr = selected ? 0.85 : hovered ? 0.55 : lit ? 0.38 : 0;
     ringMat.opacity = damp(ringMat.opacity, tr, 8, dt);

@@ -17,6 +17,8 @@ export interface World {
   trees: Tree[];
   houses: HouseSpot[];
   hills: Hill[];
+  /** 草地上的小花叢 */
+  flowers: { x: number; z: number; c: number; s: number }[];
   /** 主要道路旁的路燈 */
   lamps: { x: number; z: number }[];
   /** 地面高度（丘陵上會高一點） */
@@ -24,8 +26,8 @@ export interface World {
 }
 
 const FIELD_COLORS: [string, Field['kind'], number][] = [
-  ['#B9D68F', 'crop', 26], ['#A2CB80', 'crop', 20], ['#E8D27F', 'rice', 14], ['#EEDC9E', 'plain', 9],
-  ['#7FAE6A', 'herb', 12], ['#8FCBC2', 'pond', 9], ['#C9DE98', 'plain', 10],
+  ['#A9DB7E', 'crop', 26], ['#93D06F', 'crop', 20], ['#F2D46B', 'rice', 14], ['#F6DE95', 'plain', 9],
+  ['#6DB25C', 'herb', 12], ['#7FD3CF', 'pond', 9], ['#C2E48F', 'plain', 10],
 ];
 
 export function buildWorld(pois: Poi[]): World {
@@ -149,6 +151,16 @@ export function buildWorld(pois: Poi[]): World {
     }
     return y;
   };
+  // 小花叢：散在樹旁、房子邊、河岸，讓草地熱鬧一點
+  const flowers: { x: number; z: number; c: number; s: number }[] = [];
+  for (let i = 0; i < 3000 && flowers.length < 420; i++) {
+    const near0 = R() < 0.6 ? trees[Math.floor(R() * trees.length)] : houses[Math.floor(R() * houses.length)];
+    if (!near0) continue;
+    const p: V2 = [near0.x + (R() - 0.5) * 1.1, near0.z + (R() - 0.5) * 1.1];
+    if (!onLand(p, 0.2) || near(p, roadPts, 0.22) || near(p, riverLines, 0.32) || inField(p) || poiNear(p, 0.6)) continue;
+    if (houses.some((h) => Math.hypot(h.x - p[0], h.z - p[1]) < 0.28) || trees.some((t) => Math.hypot(t.x - p[0], t.z - p[1]) < 0.16)) continue;
+    flowers.push({ x: p[0], z: p[1], c: Math.floor(R() * 5), s: 0.6 + R() * 0.5 });
+  }
   const lamps: { x: number; z: number }[] = [];
   for (const r of roads) {
     if (!r.main) continue;
@@ -160,7 +172,7 @@ export function buildWorld(pois: Poi[]): World {
       if (onLand(q, 0.2) && !poiNear(q, 0.7)) lamps.push({ x: q[0], z: q[1] });
     }
   }
-  return { roads, rivers, rail, fields, trees, houses, hills, lamps, groundY };
+  return { roads, rivers, rail, fields, trees, houses, hills, flowers, lamps, groundY };
 }
 
 export const landShape = () => {

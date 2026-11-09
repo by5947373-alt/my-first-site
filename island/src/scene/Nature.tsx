@@ -4,12 +4,12 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { World } from '../world';
 import { BOUNDS } from '../geo';
-import { C, G, NIGHT, ROOFS, mat, windMat } from './kit';
+import { C, G, NIGHT, ROOFS, addGrow, mat, windMat } from './kit';
 import { frozen } from '../store';
 
 const dummy = new THREE.Object3D();
 const color = new THREE.Color();
-const LEAVES = [C.leaf, C.leaf2, C.leaf3, '#8CBF73', '#A3C97E'];
+const LEAVES = [C.leaf, C.leaf2, C.leaf3, '#7CCB5E', '#9AD474'];
 
 export function Trees({ world }: { world: World }) {
   const trunk = useRef<THREE.InstancedMesh>(null!);
@@ -46,9 +46,9 @@ export function Trees({ world }: { world: World }) {
     };
     fill(round.current, groups.round, (t) => {
       const y = world.groundY(t.x, t.z);
-      dummy.position.set(t.x, y + 0.36 * t.s, t.z);
-      dummy.rotation.set(t.tone * 2, t.tone * 6, 0);
-      dummy.scale.setScalar(0.42 * t.s);
+      dummy.position.set(t.x, y + 0.38 * t.s, t.z);
+      dummy.rotation.set(0, t.tone * 6, 0);
+      dummy.scale.set(0.46 * t.s, 0.42 * t.s, 0.46 * t.s);
     });
     fill(pine.current, groups.pine, (t) => {
       const y = world.groundY(t.x, t.z);
@@ -80,7 +80,7 @@ export function Houses({ world }: { world: World }) {
   const roof = useRef<THREE.InstancedMesh>(null!);
   const win = useRef<THREE.InstancedMesh>(null!);
   // 窗戶：白天是淡色玻璃，入夜後一盞盞亮起暖黃色
-  const winMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#CFE3EA' }), []);
+  const winMat = useMemo(() => { const m = new THREE.MeshBasicMaterial({ color: '#CFE3EA' }); addGrow(m, 'win'); return m; }, []);
   const dayC = useMemo(() => new THREE.Color('#CFE3EA'), []), nightC = useMemo(() => new THREE.Color('#FFCF6E'), []);
   useFrame(() => { winMat.color.copy(dayC).lerp(nightC, NIGHT.value); });
   useLayoutEffect(() => {
@@ -151,6 +151,39 @@ export function Clouds() {
           ))}
         </group>
       ))}
+    </>
+  );
+}
+
+const PETALS = ['#FFFFFF', '#FFD84D', '#FF9DB8', '#B99CF2', '#FF8A65'];
+// 花很小，用面數少的球就夠圓了
+const FLOWER = new THREE.SphereGeometry(0.5, 8, 6);
+/** 草地上的小花：一朵花＝一顆小球，隨風輕擺，開場時一朵朵冒出來。 */
+export function Flowers({ world }: { world: World }) {
+  const head = useRef<THREE.InstancedMesh>(null!);
+  const stem = useRef<THREE.InstancedMesh>(null!);
+  useLayoutEffect(() => {
+    world.flowers.forEach((f, i) => {
+      const y = world.groundY(f.x, f.z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.position.set(f.x, y, f.z);
+      dummy.scale.set(0.025, 0.13 * f.s, 0.025);
+      dummy.updateMatrix();
+      stem.current.setMatrixAt(i, dummy.matrix);
+      dummy.position.set(f.x, y + 0.13 * f.s, f.z);
+      dummy.scale.set(0.09 * f.s, 0.06 * f.s, 0.09 * f.s);
+      dummy.updateMatrix();
+      head.current.setMatrixAt(i, dummy.matrix);
+      head.current.setColorAt(i, color.set(PETALS[f.c]));
+    });
+    stem.current.instanceMatrix.needsUpdate = true;
+    head.current.instanceMatrix.needsUpdate = true;
+    if (head.current.instanceColor) head.current.instanceColor.needsUpdate = true;
+  }, [world]);
+  return (
+    <>
+      <instancedMesh ref={stem} args={[G.cyl6, windMat(C.leaf3, 0.02, 2.4), world.flowers.length]} />
+      <instancedMesh ref={head} args={[FLOWER, windMat('#ffffff', 0.03, 2.4), world.flowers.length]} />
     </>
   );
 }
