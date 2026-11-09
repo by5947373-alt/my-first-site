@@ -30,7 +30,7 @@ npm run preview    # 在本機預覽 dist/
 | `src/scene/CameraRig.tsx` | 正交等角鏡頭、鏡頭飛行、平移限制 |
 | `src/world.ts` | 農田、樹、房子、丘陵的擺放（固定亂數種子，每次長得一樣） |
 | `src/App.tsx`、`src/styles.css` | 介面：分類篩選、資訊卡、小旅行面板 |
-| `src/geo.json` | 鄉界、河川、鐵路幾何，由 `npm run geo` 從 `data/ring.json`、`data/lines.json` 產生 |
+| `src/geo.json` | 鄉界、河川、鐵路幾何，由 `npm run geo` 從 `osm/ring.json`、`osm/lines.json` 產生 |
 
 `spots.json` 裡有、`data.ts` 裡沒設定模型的據點，會自動放一棟通用小店。
 市區店家彼此距離很近，島上會把建築稍微推開，所以位置是示意而非精確門牌。
