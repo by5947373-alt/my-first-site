@@ -23,12 +23,8 @@ var CONFIG = {
 var DOC_TYPES = ['電子發票', '傳統發票', '計程車收據', '高鐵票', '其他收據'];
 var CATEGORIES = ['餐飲', '交通', '日用品', '辦公', '娛樂', '醫療', '其他'];
 
-var HEADERS = [
-  '上傳時間', '發票日期', '發票號碼', '賣方統編', '賣方名稱',
-  '銷售額(未稅)', '稅額', '總金額', '類別', '品項', '備註', '照片', '來源', '票據類型',
-];
-var COL_INVOICE_NO = 3; // 「發票號碼」在第幾欄（從 1 算）
-var COL_TOTAL = 8;
+var HEADERS = ['發票日期', '票據類型', '賣方名稱', '總金額', '類別', '品項', '備註', '照片'];
+var COL = { date: 0, docType: 1, seller: 2, total: 3, category: 4 }; // 欄位位置（從 0 算）
 
 // ===== 網頁入口 =====
 
@@ -172,7 +168,7 @@ function readReceipt(token, photo) {
   };
 }
 
-/** 儲存一張發票。回傳 { ok, sheet, duplicate, sellerName } */
+/** 儲存一張發票。回傳 { ok, sheet, sellerName }；可能重複時回傳 { ok: false, duplicate: true } */
 function saveInvoice(token, inv) {
   checkToken_(token);
   inv = clean_(inv);
@@ -182,21 +178,20 @@ function saveInvoice(token, inv) {
   try {
     var month = inv.date.slice(0, 7); // YYYY-MM
     var sheet = getMonthSheet_(month);
-    // 舊版建立的工作表少了後來加的欄位 → 補上標題
-    if (sheet.getLastColumn() < HEADERS.length) {
-      sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS])
-        .setFontWeight('bold').setBackground('#f1f3f4');
-    }
-
-    if (inv.number && !inv.allowDuplicate) {
-      var found = sheet.getRange(2, COL_INVOICE_NO, Math.max(sheet.getLastRow() - 1, 1), 1)
-        .createTextFinder(inv.number).matchEntireCell(true).findNext();
-      if (found) {
-        return { ok: false, duplicate: true, sheet: month, error: '這張發票（' + inv.number + '）已經登記過了' };
-      }
-    }
 
     if (!inv.sellerName && inv.sellerId) inv.sellerName = lookupSeller_(inv.sellerId);
+
+    // 同一天、同店家、同金額 → 可能重複上傳，先問使用者
+    if (!inv.allowDuplicate && sheet.getLastRow() > 1) {
+      var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, HEADERS.length).getDisplayValues();
+      var dup = rows.some(function (r) {
+        return r[COL.date] === inv.date && r[COL.seller] === inv.sellerName &&
+          Number(String(r[COL.total]).replace(/,/g, '')) === inv.total;
+      });
+      if (dup) {
+        return { ok: false, duplicate: true, sheet: month, error: '同一天、同店家、同金額的單據已經登記過了' };
+      }
+    }
 
     var photoCell = '';
     if (inv.photo) {
@@ -204,14 +199,9 @@ function saveInvoice(token, inv) {
       photoCell = '=HYPERLINK("' + url + '","查看照片")';
     }
 
-    var tax = (inv.total !== '' && inv.sales !== '') ? inv.total - inv.sales : '';
     sheet.appendRow([
-      new Date(), inv.date, inv.number, inv.sellerId, inv.sellerName,
-      inv.sales, tax, inv.total, inv.category, inv.items, inv.note, photoCell, inv.source, inv.docType,
+      inv.date, inv.docType, inv.sellerName, inv.total, inv.category, inv.items, inv.note, photoCell,
     ]);
-    var row = sheet.getLastRow();
-    sheet.getRange(row, 1).setNumberFormat('yyyy-mm-dd hh:mm');
-    sheet.getRange(row, 4).setNumberFormat('@');
 
     return { ok: true, sheet: month, sellerName: inv.sellerName };
   } finally {
@@ -227,10 +217,14 @@ function listMonth(token, month) {
 
   var sheet = getSpreadsheet_().getSheetByName(month);
   var rows = [];
+  if (sheet) fixLayout_(sheet);
   if (sheet && sheet.getLastRow() > 1) {
     var values = sheet.getRange(2, 1, sheet.getLastRow() - 1, HEADERS.length).getDisplayValues();
     rows = values.map(function (r) {
-      return { date: r[1], number: r[2], sellerName: r[4] || r[3], total: Number(String(r[7]).replace(/,/g, '')) || 0, category: r[8] };
+      return {
+        date: r[COL.date], docType: r[COL.docType], sellerName: r[COL.seller],
+        total: Number(String(r[COL.total]).replace(/,/g, '')) || 0, category: r[COL.category],
+      };
     }).reverse();
   }
   var total = rows.reduce(function (s, r) { return s + r.total; }, 0);
@@ -285,7 +279,7 @@ function getSpreadsheet_() {
 function getMonthSheet_(month) {
   var ss = getSpreadsheet_();
   var sheet = ss.getSheetByName(month);
-  if (sheet) return sheet;
+  if (sheet) { fixLayout_(sheet); return sheet; }
 
   // 新月份插在第一個「比它舊」的月份工作表前面 → 最新的月份在最左邊
   var index = ss.getSheets().length;
@@ -295,15 +289,7 @@ function getMonthSheet_(month) {
     if (/^\d{4}-\d{2}$/.test(name) && name < month) { index = i; break; }
   }
   sheet = ss.insertSheet(month, index);
-  sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS])
-    .setFontWeight('bold').setBackground('#f1f3f4');
-  sheet.setFrozenRows(1);
-  sheet.getRange('B:B').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('C:D').setNumberFormat('@');
-  sheet.getRange('F:H').setNumberFormat('#,##0');
-  sheet.setColumnWidth(1, 130);
-  sheet.setColumnWidth(5, 180);
-  sheet.setColumnWidth(10, 220);
+  formatSheet_(sheet);
 
   // 刪掉新試算表預設的空白「工作表1」
   var blank = ss.getSheetByName('工作表1') || ss.getSheetByName('Sheet1');
@@ -311,12 +297,52 @@ function getMonthSheet_(month) {
   return sheet;
 }
 
+function formatSheet_(sheet) {
+  sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS])
+    .setFontWeight('bold').setBackground('#f1f3f4');
+  sheet.setFrozenRows(1);
+  sheet.getRange('A:A').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('D:D').setNumberFormat('#,##0');
+  sheet.setColumnWidth(1, 100);
+  sheet.setColumnWidth(3, 180);
+  sheet.setColumnWidth(6, 220);
+  sheet.setColumnWidth(7, 200);
+}
+
+/**
+ * 舊版工作表的欄位跟現在不同時，依標題名稱把資料搬到新欄位，不要的欄位刪掉。
+ * 照片連結是公式，要用 getFormulas 才不會變成純文字。
+ */
+function fixLayout_(sheet) {
+  var width = sheet.getLastColumn();
+  if (width === 0) { formatSheet_(sheet); return; }
+  var old = sheet.getRange(1, 1, 1, width).getValues()[0].map(String);
+  if (old.join('|') === HEADERS.join('|')) return;
+
+  var n = sheet.getLastRow() - 1;
+  var values = n > 0 ? sheet.getRange(2, 1, n, width).getValues() : [];
+  var formulas = n > 0 ? sheet.getRange(2, 1, n, width).getFormulas() : [];
+  var rows = values.map(function (r, i) {
+    return HEADERS.map(function (h) {
+      var k = old.indexOf(h);
+      if (k < 0) return '';
+      if (formulas[i][k]) return formulas[i][k];
+      var v = r[k];
+      // 文字開頭是 = + - @ 的，加 ' 避免被當成公式
+      return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v;
+    });
+  });
+  sheet.clear();
+  formatSheet_(sheet);
+  if (rows.length) sheet.getRange(2, 1, rows.length, HEADERS.length).setValues(rows);
+}
+
 function savePhoto_(dataUrl, month, inv) {
   var m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(dataUrl);
   if (!m) throw new Error('照片格式不對');
   var root = getFolder_(CONFIG.PHOTO_FOLDER, DriveApp.getRootFolder());
   var folder = getFolder_(month, root);
-  var name = [inv.date, inv.number || '無號碼', inv.total || ''].join('_') + '.jpg';
+  var name = [inv.date, inv.sellerName || inv.docType || '單據', inv.total].join('_').replace(/[\\/:*?"<>|]/g, '') + '.jpg';
   var blob = Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], name);
   return folder.createFile(blob).getUrl();
 }
@@ -363,12 +389,10 @@ function clean_(inv) {
     number: str(inv.number, 10).toUpperCase(),
     sellerId: str(inv.sellerId, 8),
     sellerName: str(inv.sellerName, 100),
-    sales: num(inv.sales),
     total: num(inv.total),
     category: str(inv.category, 20),
     items: str(inv.items, 1000),
     note: str(inv.note, 500),
-    source: { QR: 'QR 掃描', AI: 'AI 讀取' }[inv.source] || '手動輸入',
     docType: DOC_TYPES.indexOf(inv.docType) >= 0 ? inv.docType : '',
     photo: inv.photo ? String(inv.photo) : '',
     allowDuplicate: inv.allowDuplicate === true,
