@@ -175,6 +175,9 @@ dialog h3{margin:0 0 12px;font-size:17px}
   function load(k) { try { return localStorage.getItem('inv.' + k) || ''; } catch (e) { return ''; } }
   function store(k, v) { try { localStorage.setItem('inv.' + k, v); } catch (e) {} }
   var cfg = { url: load('url'), token: load('token') };
+  // 用「免輸入連結」（網址結尾 ?k=通行碼）打開時，Apps Script 會把通行碼放在這裡
+  var BOOT_TOKEN = '';
+  if (BOOT_TOKEN) { cfg.token = BOOT_TOKEN; store('token', BOOT_TOKEN); }
   var category = load('cat') || '餐飲';
 
   // ---------- 後端呼叫 ----------

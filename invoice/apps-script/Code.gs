@@ -37,7 +37,13 @@ function doGet(e) {
   if (p.action === 'ping') {
     return json_(safely_(function () { return ping(p.token); }));
   }
-  return HtmlService.createHtmlOutputFromFile('index')
+  var html = HtmlService.createHtmlOutputFromFile('index').getContent();
+  // 網址帶 ?k=通行碼 而且正確 → 把通行碼放進頁面，手機就不用輸入
+  var expected = PropertiesService.getScriptProperties().getProperty('TOKEN');
+  if (expected && p.k === expected) {
+    html = html.replace("var BOOT_TOKEN = '';", 'var BOOT_TOKEN = ' + JSON.stringify(expected) + ';');
+  }
+  return HtmlService.createHtmlOutput(html)
     .setTitle('發票整理')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
@@ -250,7 +256,17 @@ function setup() {
     : 'Claude AI 讀取：未啟用（到「專案設定 → 指令碼屬性」新增 ANTHROPIC_API_KEY）');
 }
 
-/** 想換通行碼（例如不小心外流）就執行這個，再到執行紀錄看新的。 */
+/** 執行後到「執行紀錄」複製「免輸入連結」，手機打開它再加到主畫面，就不用輸入通行碼。 */
+function showLink() {
+  var token = PropertiesService.getScriptProperties().getProperty('TOKEN');
+  if (!token) throw new Error('還沒有通行碼：請先執行 setup');
+  var url = ScriptApp.getService().getUrl();
+  if (!url) throw new Error('還沒部署：請先「部署 → 新增部署作業 → 網頁應用程式」');
+  url = url.replace(/\/dev$/, '/exec');
+  Logger.log('免輸入連結（不要傳給別人）：' + url + '?k=' + token);
+}
+
+/** 想換通行碼（例如不小心外流）就執行這個，再到執行紀錄看新的。舊的免輸入連結也會失效。 */
 function resetToken() {
   PropertiesService.getScriptProperties().deleteProperty('TOKEN');
   setup();
